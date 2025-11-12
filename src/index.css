@@ -1,0 +1,157 @@
+@import './styles/attendance.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+All colors MUST be HSL.
+*/
+
+@layer base {
+  /* Light theme (default) */
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222 15% 12%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222 15% 12%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 15% 12%;
+
+    --primary: 20 100% 60%;
+    --primary-foreground: 0 0% 98%;
+
+    --secondary: 280 80% 60%;
+    --secondary-foreground: 0 0% 98%;
+
+    --muted: 220 14% 96%;
+    --muted-foreground: 215 10% 55%;
+
+    --accent: 280 80% 60%;
+    --accent-foreground: 0 0% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 220 14% 93%;
+    --input: 220 14% 93%;
+    --ring: 20 100% 60%;
+
+    --radius: 0.75rem;
+
+    /* Gym-specific design tokens */
+    --gradient-primary: linear-gradient(135deg, hsl(20 100% 60%) 0%, hsl(280 80% 60%) 100%);
+    --gradient-card: linear-gradient(135deg, hsl(0 0% 100% / 0.9) 0%, hsl(220 14% 96% / 0.9) 100%);
+    --gradient-hero: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(220 14% 96%) 100%);
+    
+    --shadow-glow: 0 0 40px hsl(20 100% 60% / 0.15);
+    --shadow-card: 0 10px 30px -10px hsl(222 15% 12% / 0.08);
+    
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 222 15% 12%;
+    --sidebar-primary: 20 100% 60%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 220 14% 93%;
+    --sidebar-accent-foreground: 222 15% 12%;
+    --sidebar-border: 220 14% 93%;
+    --sidebar-ring: 20 100% 60%;
+  }
+
+  /* Dark theme overrides */
+  .dark {
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 98%;
+
+    --card: 240 8% 8%;
+    --card-foreground: 0 0% 98%;
+
+    --popover: 240 8% 8%;
+    --popover-foreground: 0 0% 98%;
+
+    --primary: 20 100% 60%;
+    --primary-foreground: 0 0% 98%;
+
+    --secondary: 280 80% 60%;
+    --secondary-foreground: 0 0% 98%;
+
+    --muted: 240 6% 15%;
+    --muted-foreground: 240 5% 65%;
+
+    --accent: 280 80% 60%;
+    --accent-foreground: 0 0% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 240 6% 15%;
+    --input: 240 6% 15%;
+    --ring: 20 100% 60%;
+
+    --sidebar-background: 240 8% 8%;
+    --sidebar-foreground: 0 0% 98%;
+    --sidebar-primary: 20 100% 60%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 6% 15%;
+    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-border: 240 6% 15%;
+    --sidebar-ring: 20 100% 60%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+  
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    @apply bg-background;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    @apply bg-muted rounded-full;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-muted-foreground;
+  }
+}
+
+@layer utilities {
+  .gradient-primary {
+    background: var(--gradient-primary);
+  }
+  
+  .gradient-card {
+    background: var(--gradient-card);
+  }
+  
+  .text-gradient {
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  
+  .glow-primary {
+    box-shadow: var(--shadow-glow);
+  }
+  
+  .card-shadow {
+    box-shadow: var(--shadow-card);
+  }
+}

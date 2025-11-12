@@ -1,0 +1,17 @@
+node_modules
+
+# Env files
+.env
+gym-api/.env
+
+# Build artifacts
+dist
+build
+.vite
+
+# Logs
+npm-debug.log*
+yarn-error.log*
+
+# OS junk
+.DS_Store
