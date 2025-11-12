@@ -210,13 +210,6 @@ const Login = () => {
             </Button>
           </form>
 
-          <div className="mt-6 p-4 rounded-lg bg-muted/50 space-y-2 text-xs">
-            <p className="font-semibold text-foreground">Credenciais de Teste:</p>
-            <div className="space-y-1 text-muted-foreground">
-              <p>Admin: admin@gmail.com / admin123</p>
-              <p>Instrutor: carlos@gmail.com / instructor123</p>
-            </div>
-          </div>
         </CardContent>
       </Card>
     </div>
