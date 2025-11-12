@@ -1,9 +1,9 @@
 import { Router } from 'express';
-import { auth } from '../middlewares/auth.middleware';
+import { authenticateToken } from '../middleware';
 import { listInstructors } from '../controllers/instructor.controller';
 
 const router = Router();
 
-router.get('/', auth, listInstructors);
+router.get('/', authenticateToken, listInstructors);
 
 export default router;

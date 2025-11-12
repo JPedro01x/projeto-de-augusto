@@ -4,7 +4,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { AppDataSource } from './config/database';
 import { router } from './routes';
-import { errorHandler } from './middlewares/error.middleware';
+import { errorHandler } from './middleware/error.middleware';
 
 dotenv.config();
 

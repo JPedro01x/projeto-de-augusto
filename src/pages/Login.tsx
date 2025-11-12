@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -25,10 +25,11 @@ const Login = () => {
   const { toast } = useToast();
 
   // Redirect if already authenticated
-  if (isAuthenticated) {
-    navigate('/admin');
-    return null;
-  }
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/admin');
+    }
+  }, [isAuthenticated, navigate]);
 
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {};
@@ -89,6 +90,11 @@ const Login = () => {
     
     setLoading(false);
   };
+
+  // Se estiver autenticado, não renderiza nada até o redirecionamento
+  if (isAuthenticated) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">

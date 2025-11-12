@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
+import * as jwt from 'jsonwebtoken';
 import { AppDataSource } from '../config/database';
 import { User } from '../entities/User';
 
@@ -18,11 +18,22 @@ export const register = async (req: Request, res: Response) => {
     const user = repo.create({ name, email, passwordHash, userType, status: 'active' });
     await repo.save(user);
 
-    const token = jwt.sign(
-      { user: { id: user.id, userType: user.userType } },
-      process.env['JWT_SECRET'] as string,
-      { expiresIn: (process.env['JWT_EXPIRES_IN'] as string) || '1d' }
-    );
+    const jwtSecret = process.env.JWT_SECRET || 'your-secret-key';
+    const jwtExpiresIn = process.env.JWT_EXPIRES_IN || '1d';
+    
+    // Usar uma função de callback para evitar problemas de tipagem
+    const token = await new Promise<string>((resolve, reject) => {
+      jwt.sign(
+        { user: { id: user.id, userType: user.userType } },
+        jwtSecret,
+        { expiresIn: jwtExpiresIn } as jwt.SignOptions,
+        (err, token) => {
+          if (err) reject(err);
+          else if (!token) reject(new Error('Token not generated'));
+          else resolve(token);
+        }
+      );
+    });
 
     return res.status(201).json({
       token,
@@ -67,11 +78,22 @@ export const login = async (req: Request, res: Response) => {
     
     console.log('Login bem-sucedido para o usuário:', user.id);
 
-    const token = jwt.sign(
-      { user: { id: user.id, userType: user.userType } },
-      process.env['JWT_SECRET'] as string,
-      { expiresIn: (process.env['JWT_EXPIRES_IN'] as string) || '1d' }
-    );
+    const jwtSecret = process.env.JWT_SECRET || 'your-secret-key';
+    const jwtExpiresIn = process.env.JWT_EXPIRES_IN || '1d';
+    
+    // Usar uma função de callback para evitar problemas de tipagem
+    const token = await new Promise<string>((resolve, reject) => {
+      jwt.sign(
+        { user: { id: user.id, userType: user.userType } },
+        jwtSecret,
+        { expiresIn: jwtExpiresIn } as jwt.SignOptions,
+        (err, token) => {
+          if (err) reject(err);
+          else if (!token) reject(new Error('Token not generated'));
+          else resolve(token);
+        }
+      );
+    });
 
     return res.json({
       token,

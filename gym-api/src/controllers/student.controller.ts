@@ -17,27 +17,28 @@ export const createStudent = async (req: Request, res: Response) => {
 
     const passwordHash = password ? await bcrypt.hash(password, 10) : await bcrypt.hash('123456', 10);
 
-    const user = userRepo.create({
-      name,
-      email,
-      passwordHash,
-      cpf,
-      phone,
-      birthDate,
-      address,
-      userType: 'student',
-      status: 'active'
-    } as any);
-
+    // Criar e salvar o usuário primeiro
+    const user = new User();
+    user.name = name;
+    user.email = email;
+    user.passwordHash = passwordHash;
+    user.cpf = cpf;
+    user.phone = phone;
+    user.birthDate = birthDate;
+    user.address = address;
+    user.userType = 'student';
+    user.status = 'active';
+    
     const savedUser = await userRepo.save(user);
-
-    const student = studentRepo.create({
-      userId: savedUser.id,
-      emergencyContactName,
-      emergencyContactPhone,
-    });
+    
+    // Criar e salvar o estudante
+    const student = new Student();
+    student.user = savedUser;
+    student.emergencyContactName = emergencyContactName;
+    student.emergencyContactPhone = emergencyContactPhone;
+    
     await studentRepo.save(student);
-
+    
     return res.status(201).json({ id: savedUser.id });
   } catch (e) {
     console.error(e);

@@ -1,4 +1,4 @@
-import { Student, Instructor, WorkoutPlan, Payment, Attendance } from '@/types';
+import { Student, Instructor, WorkoutPlan, Payment, Attendance, DashboardStats } from '@/types';
 
 const STORAGE_KEYS = {
   STUDENTS: 'gym_students',
@@ -230,11 +230,31 @@ export const instructorAPI = {
 
   // Buscar instrutores por especialidade
   getBySpecialty: async (specialty: string): Promise<Instructor[]> => {
-    await delay(300);
-    const instructors = getStorageData<Instructor>(STORAGE_KEYS.INSTRUCTORS);
-    return instructors.filter(instructor => 
-      instructor.specialties.includes(specialty.toLowerCase())
-    );
+    return delay(200).then(() => {
+      const instructors = getStorageData<Instructor>(STORAGE_KEYS.INSTRUCTORS);
+      return instructors.filter(i => i.specialties.includes(specialty));
+    });
+  },
+};
+
+// API do Dashboard
+export const dashboardAPI = {
+  // Buscar estatísticas do dashboard
+  getStats: async (): Promise<DashboardStats> => {
+    const token = getToken();
+    const res = await fetch(`${API_BASE}/dashboard/stats`, {
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+    });
+    
+    if (!res.ok) {
+      const error = await res.json();
+      throw new Error(error.message || 'Falha ao buscar estatísticas do dashboard');
+    }
+    
+    return res.json();
   },
 };
 

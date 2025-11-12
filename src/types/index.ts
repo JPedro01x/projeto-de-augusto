@@ -77,3 +77,40 @@ export interface Payment {
   dueDate: string;
   paidDate?: string;
 }
+
+export interface DashboardStats {
+  summary: {
+    activeStudents: {
+      count: number;
+      change: number;
+      trend: 'up' | 'down';
+    };
+    monthlyRevenue: {
+      amount: number;
+      change: number;
+      trend: 'up' | 'down';
+    };
+    todayAttendance: {
+      count: number;
+      change: number;
+      trend: 'up' | 'down';
+    };
+    activeWorkouts: {
+      count: number;
+      change: number;
+      trend: 'up' | 'down';
+    };
+  };
+  recentActivities: Array<{
+    name: string;
+    action: string;
+    time: string;
+  }>;
+  weeklyStats: {
+    attendanceRate: number;
+    newStudents: number;
+    renewals: number;
+    mostPopularPlan: string;
+    peakHour: string;
+  };
+}

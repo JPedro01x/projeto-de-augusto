@@ -1,5 +1,7 @@
-import { Entity, PrimaryColumn, Column, OneToOne, JoinColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, PrimaryColumn, Column, OneToOne, JoinColumn, CreateDateColumn, UpdateDateColumn, ManyToOne, OneToMany } from 'typeorm';
 import { User } from './User';
+import { Instructor } from './Instructor';
+import { WorkoutPlan } from './WorkoutPlan';
 
 @Entity('students')
 export class Student {
@@ -27,4 +29,14 @@ export class Student {
 
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt!: Date;
+
+  @Column({ name: 'instructor_id', nullable: true })
+  instructorId?: number;
+
+  @ManyToOne(() => Instructor, instructor => instructor.students, { onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'instructor_id' })
+  instructor?: Instructor;
+
+  @OneToMany(() => WorkoutPlan, workoutPlan => workoutPlan.student)
+  workoutPlans?: WorkoutPlan[];
 }
