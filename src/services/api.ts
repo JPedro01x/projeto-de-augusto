@@ -1,4 +1,4 @@
-import { Student, Instructor, WorkoutPlan, Payment, Attendance, DashboardStats } from '@/types';
+import { Student, Instructor, WorkoutPlan, Payment, Attendance, DashboardStats, FinancialSummary, PaymentFilter } from '@/types';
 
 const STORAGE_KEYS = {
   STUDENTS: 'gym_students',
@@ -242,19 +242,101 @@ export const dashboardAPI = {
   // Buscar estatísticas do dashboard
   getStats: async (): Promise<DashboardStats> => {
     const token = getToken();
-    const res = await fetch(`${API_BASE}/dashboard/stats`, {
-      headers: { 
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
+    const response = await fetch(`${API_BASE}/dashboard/stats`, {
+      headers: { Authorization: `Bearer ${token}` },
     });
-    
-    if (!res.ok) {
-      const error = await res.json();
-      throw new Error(error.message || 'Falha ao buscar estatísticas do dashboard');
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Erro ao buscar estatísticas do dashboard');
     }
+
+    return response.json();
+  },
+};
+
+// API de Finanças
+export const financeAPI = {
+  // Obter resumo financeiro
+  getFinancialSummary: async (): Promise<FinancialSummary> => {
+    const token = getToken();
+    const response = await fetch(`${API_BASE}/finance/summary`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Erro ao buscar resumo financeiro');
+    }
+
+    const data = await response.json();
+    console.log('Resposta da API de finanças (bruta):', data);
+    return data;
+  },
+
+  // Listar pagamentos com filtros
+  getPayments: async (filters?: PaymentFilter): Promise<Payment[]> => {
+    const token = getToken();
+    const queryParams = new URLSearchParams();
     
-    return res.json();
+    if (filters) {
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value !== undefined) {
+          queryParams.append(key, String(value));
+        }
+      });
+    }
+
+    const response = await fetch(`${API_BASE}/finance/payments?${queryParams.toString()}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Erro ao buscar pagamentos');
+    }
+
+    return response.json();
+  },
+
+  // Registrar um novo pagamento
+  createPayment: async (paymentData: Omit<Payment, 'id'>): Promise<Payment> => {
+    const token = getToken();
+    const response = await fetch(`${API_BASE}/finance/payments`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(paymentData),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Erro ao registrar pagamento');
+    }
+
+    return response.json();
+  },
+
+  // Atualizar um pagamento existente
+  updatePayment: async (id: string, paymentData: Partial<Payment>): Promise<Payment> => {
+    const token = getToken();
+    const response = await fetch(`${API_BASE}/finance/payments/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(paymentData),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Erro ao atualizar pagamento');
+    }
+
+    return response.json();
   },
 };
 

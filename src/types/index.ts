@@ -71,11 +71,54 @@ export interface Payment {
   studentId: string;
   amount: number;
   date: string;
-  status: 'pending' | 'paid' | 'cancelled' | 'refunded';
-  method: 'credit_card' | 'debit_card' | 'cash' | 'pix' | 'bank_transfer';
-  planType: 'basic' | 'premium' | 'vip';
+  status: 'pending' | 'paid' | 'cancelled' | 'refunded' | 'overdue';
+  method: 'credit_card' | 'debit_card' | 'cash' | 'pix' | 'bank_transfer' | string; // string para compatibilidade
+  planType: 'basic' | 'premium' | 'vip' | string; // string para compatibilidade
   dueDate: string;
   paidDate?: string;
+  // Adicionando propriedades opcionais para compatibilidade
+  paymentDate?: string;
+  studentName?: string;
+  paymentMethod?: string;
+}
+
+export interface FinancialSummary {
+  summary: {
+    currentMonthRevenue: {
+      amount: number;
+      change: number;
+      trend: 'up' | 'down';
+    };
+    pendingPayments: {
+      amount: number;
+      count: number;
+    };
+    overduePayments: {
+      amount: number;
+      count: number;
+    };
+    paymentRate: number;
+  };
+  recentPayments: Array<{
+    studentName: string;
+    planType: string;
+    dueDate: string;
+    paymentDate: string | null;
+    amount: number;
+    status: string;
+    paymentMethod: string;
+  }>;
+  monthlyRevenue: Array<{
+    month: string;
+    revenue: number;
+  }>;
+}
+
+export interface PaymentFilter {
+  status?: 'pending' | 'paid' | 'overdue' | 'cancelled';
+  startDate?: string;
+  endDate?: string;
+  studentId?: string;
 }
 
 export interface DashboardStats {

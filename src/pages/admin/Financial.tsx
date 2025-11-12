@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,117 +9,202 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { DollarSign, TrendingUp, TrendingDown, Clock, CheckCircle, XCircle, Search } from 'lucide-react';
+import { DollarSign, TrendingUp, TrendingDown, Clock, CheckCircle, XCircle, Search, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-
-interface Payment {
-  id: string;
-  studentName: string;
-  plan: string;
-  amount: number;
-  dueDate: string;
-  paidDate?: string;
-  status: 'paid' | 'pending' | 'overdue';
-  paymentMethod?: string;
-}
+import { financeAPI, studentAPI } from '@/services/api';
+import { Payment, FinancialSummary } from '@/types';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 const Financial = () => {
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
-  
-  const [payments, setPayments] = useState<Payment[]>([
-    {
-      id: '1',
-      studentName: 'João Silva',
-      plan: 'Trimestral',
-      amount: 279.90,
-      dueDate: '2024-03-15',
-      paidDate: '2024-03-14',
-      status: 'paid',
-      paymentMethod: 'Cartão de Crédito',
-    },
-    {
-      id: '2',
-      studentName: 'Maria Santos',
-      plan: 'Mensal',
-      amount: 99.90,
-      dueDate: '2024-03-10',
-      status: 'pending',
-    },
-    {
-      id: '3',
-      studentName: 'Pedro Costa',
-      plan: 'Anual',
-      amount: 999.90,
-      dueDate: '2024-02-28',
-      status: 'overdue',
-    },
-    {
-      id: '4',
-      studentName: 'Ana Paula',
-      plan: 'Mensal',
-      amount: 99.90,
-      dueDate: '2024-03-12',
-      paidDate: '2024-03-12',
-      status: 'paid',
-      paymentMethod: 'PIX',
-    },
-  ]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [financialData, setFinancialData] = useState<FinancialSummary | null>(null);
+  const [payments, setPayments] = useState<Payment[]>([]);
+
+  useEffect(() => {
+    const fetchFinancialData = async () => {
+      try {
+        setIsLoading(true);
+        // Primeiro buscamos o resumo financeiro
+        const summary = await financeAPI.getFinancialSummary();
+        console.log('Resumo financeiro:', summary);
+        
+        // Depois buscamos os pagamentos sem filtro de status
+        const payments = await financeAPI.getPayments({});
+        
+        setFinancialData(summary);
+        
+        // Log para verificar a estrutura dos dados de receita mensal
+        if (summary && summary.monthlyRevenue) {
+          console.log('Dados de receita mensal:', summary.monthlyRevenue);
+        }
+        // Mapeamos os pagamentos para incluir o nome do aluno
+        const paymentsWithStudentNames = await Promise.all(payments.map(async (payment: Payment) => {
+          try {
+            // Usando o método get da studentAPI para buscar os detalhes do aluno
+            const student = await studentAPI.get(payment.studentId);
+            return {
+              ...payment,
+              studentName: student?.name || 'Aluno não encontrado',
+              // Garantindo que as propriedades opcionais estejam definidas
+              paymentMethod: payment.method || 'cash',
+              paymentDate: payment.paidDate
+            };
+          } catch (error) {
+            console.error('Erro ao buscar dados do aluno:', error);
+            return {
+              ...payment,
+              studentName: `Aluno (${payment.studentId.substring(0, 6)}...)`,
+              paymentMethod: payment.method || 'cash',
+              paymentDate: payment.paidDate
+            };
+          }
+        }));
+        
+        setPayments(paymentsWithStudentNames);
+      } catch (error) {
+        console.error('Erro ao carregar dados financeiros:', error);
+        toast({
+          title: 'Erro',
+          description: 'Não foi possível carregar os dados financeiros.',
+          variant: 'destructive',
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchFinancialData();
+  }, [toast]);
 
   const filteredPayments = payments.filter(payment => {
-    const matchesSearch = payment.studentName.toLowerCase().includes(searchTerm.toLowerCase());
+    const searchLower = searchTerm.toLowerCase();
+    const matchesSearch = 
+      (payment.studentName?.toLowerCase().includes(searchLower) ||
+       payment.id.toLowerCase().includes(searchLower) ||
+       payment.planType?.toLowerCase().includes(searchLower));
+       
     const matchesStatus = filterStatus === 'all' || payment.status === filterStatus;
     return matchesSearch && matchesStatus;
   });
 
-  const totalRevenue = payments
-    .filter(p => p.status === 'paid')
-    .reduce((sum, p) => sum + p.amount, 0);
+  if (isLoading || !financialData) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <span className="ml-2">Carregando dados financeiros...</span>
+      </div>
+    );
+  }
 
-  const pendingAmount = payments
-    .filter(p => p.status === 'pending')
-    .reduce((sum, p) => sum + p.amount, 0);
+  const { summary, recentPayments, monthlyRevenue } = financialData;
+  const { currentMonthRevenue, pendingPayments, overduePayments, paymentRate } = summary;
 
-  const overdueAmount = payments
-    .filter(p => p.status === 'overdue')
-    .reduce((sum, p) => sum + p.amount, 0);
-
-  const markAsPaid = (id: string) => {
-    setPayments(payments.map(p =>
-      p.id === id
-        ? { ...p, status: 'paid' as const, paidDate: new Date().toISOString().split('T')[0] }
-        : p
-    ));
-    toast({
-      title: 'Pagamento confirmado!',
-      description: 'O pagamento foi registrado com sucesso.',
-    });
+  const markAsPaid = async (id: string) => {
+    try {
+      setIsLoading(true);
+      // Atualiza o status do pagamento para pago e define a data de pagamento
+      await financeAPI.updatePayment(id, { 
+        status: 'paid', 
+        paidDate: new Date().toISOString(),
+        paymentDate: new Date().toISOString()
+      } as any); // Usando 'as any' temporariamente para evitar erros de tipagem
+      
+      // Atualiza o estado local com o pagamento atualizado
+      setPayments(payments.map(p =>
+        p.id === id
+          ? { 
+              ...p, 
+              status: 'paid', 
+              paidDate: new Date().toISOString(),
+              paymentDate: new Date().toISOString(),
+              paymentMethod: p.paymentMethod || 'Dinheiro' // Valor padrão para o método de pagamento
+            }
+          : p
+      ));
+      
+      // Atualiza o resumo financeiro
+      const updatedSummary = await financeAPI.getFinancialSummary();
+      setFinancialData(updatedSummary);
+      
+      toast({
+        title: 'Pagamento confirmado!',
+        description: 'O pagamento foi registrado com sucesso.',
+      });
+    } catch (error) {
+      console.error('Erro ao atualizar pagamento:', error);
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível registrar o pagamento.',
+        variant: 'destructive',
+      });
+    }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
+  const getStatusColor = (status: string | undefined) => {
+    if (!status) return 'bg-muted text-muted-foreground';
+    
+    switch (status.toLowerCase()) {
       case 'paid':
         return 'bg-green-500/20 text-green-500';
       case 'pending':
         return 'bg-yellow-500/20 text-yellow-500';
       case 'overdue':
         return 'bg-red-500/20 text-red-500';
+      case 'cancelled':
+        return 'bg-gray-500/20 text-gray-500';
+      case 'refunded':
+        return 'bg-blue-500/20 text-blue-500';
       default:
         return 'bg-muted text-muted-foreground';
     }
   };
 
-  const getStatusLabel = (status: string) => {
-    switch (status) {
+  const getStatusLabel = (status: string | undefined) => {
+    if (!status) return 'Desconhecido';
+    
+    switch (status.toLowerCase()) {
       case 'paid':
         return 'Pago';
       case 'pending':
         return 'Pendente';
       case 'overdue':
         return 'Atrasado';
+      case 'cancelled':
+        return 'Cancelado';
+      case 'refunded':
+        return 'Reembolsado';
       default:
-        return status;
+        return status.charAt(0).toUpperCase() + status.slice(1);
+    }
+  };
+
+  const formatCurrency = (value: number | undefined) => {
+    if (value === undefined) return 'R$ 0,00';
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+    }).format(value);
+  };
+
+  const formatDate = (dateString: string | Date | undefined | null): string => {
+    if (!dateString) return 'Data não informada';
+    
+    try {
+      const date = typeof dateString === 'string' ? new Date(dateString) : dateString;
+      
+      // Verifica se a data é válida
+      if (isNaN(date.getTime())) {
+        return 'Data inválida';
+      }
+      
+      return format(date, 'dd/MM/yyyy', { locale: ptBR });
+    } catch (error) {
+      console.error('Erro ao formatar data:', error);
+      return 'Data inválida';
     }
   };
 
@@ -141,11 +226,15 @@ const Financial = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-primary">
-              R$ {totalRevenue.toFixed(2).replace('.', ',')}
+              {formatCurrency(currentMonthRevenue.amount)}
             </div>
             <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-              <TrendingUp className="h-3 w-3 text-green-500" />
-              +8% vs mês anterior
+              {currentMonthRevenue.trend === 'up' ? (
+                <TrendingUp className="h-3 w-3 text-green-500" />
+              ) : (
+                <TrendingDown className="h-3 w-3 text-red-500" />
+              )}
+              {Math.abs(currentMonthRevenue.change)}% vs mês anterior
             </p>
           </CardContent>
         </Card>
@@ -159,10 +248,10 @@ const Financial = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-primary">
-              R$ {pendingAmount.toFixed(2).replace('.', ',')}
+              {formatCurrency(pendingPayments.amount)}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              {payments.filter(p => p.status === 'pending').length} pendentes
+              {pendingPayments.count} {pendingPayments.count === 1 ? 'pendente' : 'pendentes'}
             </p>
           </CardContent>
         </Card>
@@ -176,10 +265,10 @@ const Financial = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-primary">
-              R$ {overdueAmount.toFixed(2).replace('.', ',')}
+              {formatCurrency(overduePayments.amount)}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              {payments.filter(p => p.status === 'overdue').length} atrasados
+              {overduePayments.count} {overduePayments.count === 1 ? 'atrasado' : 'atrasados'}
             </p>
           </CardContent>
         </Card>
@@ -192,7 +281,7 @@ const Financial = () => {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-primary">95%</div>
+            <div className="text-2xl font-bold text-primary">{paymentRate}%</div>
             <p className="text-xs text-muted-foreground mt-1">em dia</p>
           </CardContent>
         </Card>
@@ -228,64 +317,70 @@ const Financial = () => {
 
       {/* Payments List */}
       <div className="grid gap-4">
-        {filteredPayments.map((payment) => (
-          <Card key={payment.id} className="border-primary/20 hover:border-primary/40 transition-all">
-            <CardContent className="p-6">
-              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 rounded-full gradient-primary flex items-center justify-center text-primary-foreground font-bold">
-                    {payment.studentName.charAt(0)}
-                  </div>
-                  <div className="space-y-1">
-                    <h3 className="font-semibold text-lg">{payment.studentName}</h3>
-                    <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
-                      <span>Plano: {payment.plan}</span>
-                      <span>Vencimento: {new Date(payment.dueDate).toLocaleDateString('pt-BR')}</span>
-                      {payment.paidDate && (
-                        <span>Pago em: {new Date(payment.paidDate).toLocaleDateString('pt-BR')}</span>
-                      )}
-                    </div>
-                    {payment.paymentMethod && (
-                      <p className="text-xs text-muted-foreground">
-                        Método: {payment.paymentMethod}
+        {filteredPayments.length > 0 ? (
+          filteredPayments.map((payment) => (
+            <Card key={payment.id} className="border-primary/20 hover:border-primary/40 transition-all">
+              <CardContent className="p-6">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                  <div>
+                    <h3 className="font-medium">
+                      {payment.studentName || `Aluno (${payment.studentId.substring(0, 6)}...)`}
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      Plano: {payment.planType ? payment.planType.charAt(0).toUpperCase() + payment.planType.slice(1) : 'N/A'}
+                    </p>
+                    <p className="text-sm">
+                      Vencimento: {formatDate(payment.dueDate)}
+                    </p>
+                    {payment.paymentDate && (
+                      <p className="text-sm">
+                        Pago em: {formatDate(payment.paymentDate)}
+                        {payment.paymentMethod && ` • ${payment.paymentMethod}`}
                       </p>
                     )}
                   </div>
-                </div>
 
-                <div className="flex items-center gap-4">
-                  <div className="text-right">
-                    <div className="text-2xl font-bold text-primary">
-                      R$ {payment.amount.toFixed(2).replace('.', ',')}
+                  <div className="flex items-center gap-4 mt-2 sm:mt-0">
+                    <div className="text-right">
+                      <div className="text-2xl font-bold text-primary">
+                        {formatCurrency(payment.amount || 0)}
+                      </div>
+                      <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(payment.status || 'pending')}`}>
+                        {getStatusLabel(payment.status || 'pending')}
+                      </span>
                     </div>
-                    <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(payment.status)}`}>
-                      {getStatusLabel(payment.status)}
-                    </span>
+                    
+                    {payment.status !== 'paid' && (
+                      <Button
+                        variant="gradient"
+                        size="sm"
+                        onClick={() => markAsPaid(payment.id)}
+                        disabled={isLoading}
+                        className="min-w-[150px]"
+                      >
+                        {isLoading ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Processando...
+                          </>
+                        ) : (
+                          'Confirmar Pagamento'
+                        )}
+                      </Button>
+                    )}
                   </div>
-                  
-                  {payment.status !== 'paid' && (
-                    <Button
-                      variant="gradient"
-                      size="sm"
-                      onClick={() => markAsPaid(payment.id)}
-                    >
-                      Confirmar Pagamento
-                    </Button>
-                  )}
                 </div>
-              </div>
+              </CardContent>
+            </Card>
+          ))
+        ) : (
+          <Card className="border-primary/20">
+            <CardContent className="p-12 text-center">
+              <p className="text-muted-foreground">Nenhum pagamento encontrado</p>
             </CardContent>
           </Card>
-        ))}
+        )}
       </div>
-
-      {filteredPayments.length === 0 && (
-        <Card className="border-primary/20">
-          <CardContent className="p-12 text-center">
-            <p className="text-muted-foreground">Nenhum pagamento encontrado</p>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Monthly Revenue Chart */}
       <Card className="border-primary/20">
@@ -295,24 +390,37 @@ const Financial = () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho'].map((month, index) => {
-              const amount = [38500, 42300, 45890, 41200, 46800, 48200][index];
-              const percentage = (amount / 50000) * 100;
-              return (
-                <div key={month} className="space-y-2">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="font-medium">{month}</span>
-                    <span className="text-muted-foreground">R$ {amount.toLocaleString('pt-BR')}</span>
+            {financialData?.monthlyRevenue?.length ? (
+              financialData.monthlyRevenue.map(({ month, revenue }) => {
+                // Encontrar o valor máximo para calcular a porcentagem relativa
+                const maxRevenue = Math.max(...financialData.monthlyRevenue.map(mr => mr.revenue), 1);
+                const percentage = (revenue / maxRevenue) * 100;
+                
+                return (
+                  <div key={month} className="space-y-2">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="font-medium">{month}</span>
+                      <span className="text-muted-foreground">
+                        {new Intl.NumberFormat('pt-BR', {
+                          style: 'currency',
+                          currency: 'BRL'
+                        }).format(revenue || 0)}
+                      </span>
+                    </div>
+                    <div className="w-full h-3 bg-muted rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-primary to-primary/70 transition-all duration-500"
+                        style={{ width: `${percentage}%` }}
+                      />
+                    </div>
                   </div>
-                  <div className="w-full h-3 bg-muted rounded-full overflow-hidden">
-                    <div
-                      className="h-full gradient-primary transition-all duration-500"
-                      style={{ width: `${percentage}%` }}
-                    />
-                  </div>
-                </div>
-              );
-            })}
+                );
+              })
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                Nenhum dado de receita disponível
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
