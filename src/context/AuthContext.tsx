@@ -97,7 +97,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (mappedUser.role === 'admin') {
         navigate('/admin');
       } else if (mappedUser.role === 'instructor') {
-        navigate('/instructor');
+        // Verificar se o usuário tem permissão para acessar a rota de instrutor
+        if (data.user.userType === 'instructor') {
+          navigate('/instructor');
+        } else {
+          console.error('Usuário não tem permissão para acessar a área de instrutor');
+          throw new Error('Acesso não autorizado');
+        }
       } else {
         navigate('/student');
       }

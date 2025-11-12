@@ -11,7 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 const Settings = () => {
   const { toast } = useToast();
   const [gymName, setGymName] = useState('GymTech Pro');
-  const [gymEmail, setGymEmail] = useState('contato@gymtech.com');
+  const [gymEmail, setGymEmail] = useState('contato@gmail.com');
   const [gymPhone, setGymPhone] = useState('(11) 3456-7890');
   const [gymAddress, setGymAddress] = useState('Rua das Academias, 123');
   const [notifications, setNotifications] = useState({

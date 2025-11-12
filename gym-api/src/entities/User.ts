@@ -1,5 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToOne } from 'typeorm';
 import { Student } from './Student';
+import { Instructor } from './Instructor';
 
 export type UserRole = 'admin' | 'instructor' | 'student';
 
@@ -43,4 +44,7 @@ export class User {
 
   @OneToOne(() => Student, (student) => student.user)
   student?: Student;
+
+  @OneToOne(() => Instructor, (instructor) => instructor.user)
+  instructor?: Instructor;
 }

@@ -60,8 +60,11 @@ export const login = async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'Email e senha são obrigatórios' });
     }
     
-    const repo = AppDataSource.getRepository(User);
-    const user = await repo.findOne({ where: { email } });
+    const userRepo = AppDataSource.getRepository(User);
+    const user = await userRepo.findOne({ 
+      where: { email },
+      relations: ['instructor']
+    });
     
     if (!user) {
       console.error('Usuário não encontrado:', email);
@@ -95,15 +98,30 @@ export const login = async (req: Request, res: Response) => {
       );
     });
 
-    return res.json({
+    // Montar resposta base com dados do usuário
+    const response: any = {
       token,
       user: {
         id: user.id,
         name: user.name,
         email: user.email,
         userType: user.userType,
+        cpf: user.cpf,
+        phone: user.phone,
       },
-    });
+    };
+
+    // Se for um instrutor, adicionar informações adicionais
+    if (user.userType === 'instructor' && user.instructor) {
+      response.user.instructor = {
+        specialty: user.instructor.specialty,
+        hireDate: user.instructor.hireDate,
+        certifications: user.instructor.certifications,
+        schedule: 'Seg a Sex: 08:00 - 18:00' // Valor padrão, ajuste conforme necessário
+      };
+    }
+
+    return res.json(response);
   } catch (e) {
     console.error(e);
     return res.status(500).json({ message: 'Server error' });
