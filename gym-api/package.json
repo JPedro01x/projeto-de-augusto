@@ -11,13 +11,15 @@
     "migration:generate": "npm run typeorm -- migration:generate",
     "migration:run": "npm run typeorm -- migration:run",
     "migration:revert": "npm run typeorm -- migration:revert",
-    "backfill:students": "ts-node ./scripts/backfill-student-passwords.ts"
+    "backfill:students": "ts-node ./scripts/backfill-student-passwords.ts",
+    "seed:workouts": "ts-node ./src/database/seed/workouts.seed.ts"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
     "@types/express": "^5.0.5",
+    "@types/multer": "^2.0.0",
     "@types/node": "^24.10.0",
     "bcrypt": "^6.0.0",
     "bcryptjs": "^3.0.3",
@@ -25,6 +27,7 @@
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.2",
+    "multer": "^2.0.2",
     "mysql2": "^3.15.3",
     "reflect-metadata": "^0.2.2",
     "ts-node": "^10.9.2",

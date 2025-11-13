@@ -4,6 +4,13 @@ import { Student } from './Student';
 
 export type WorkoutPlanStatus = 'active' | 'inactive' | 'paused' | 'completed';
 
+export interface Exercise {
+  nome: string;
+  series: number;
+  repeticoes: string;
+  descanso: string;
+}
+
 @Entity('workout_plans')
 export class WorkoutPlan {
   @PrimaryGeneratedColumn()
@@ -41,6 +48,9 @@ export class WorkoutPlan {
 
   @Column({ name: 'end_date', type: 'date', nullable: true })
   endDate?: Date;
+
+  @Column({ type: 'json', nullable: true })
+  exercises?: Exercise[];
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt!: Date;

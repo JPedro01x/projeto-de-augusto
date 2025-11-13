@@ -1,3 +1,18 @@
+export type PaymentMethod = 'pix' | 'dinheiro' | 'cartao' | 'transferencia' | 'outro';
+
+export interface PaymentHistory {
+  id: string;
+  amount: number;
+  date: string;
+  method: PaymentMethod;
+  status: 'pending' | 'paid' | 'overdue' | 'cancelled';
+  referenceMonth: string; // Formato: YYYY-MM
+  receiptUrl?: string;
+  notes?: string;
+  processedBy?: string;
+  processedAt?: string;
+}
+
 export interface Student {
   id: string;
   name: string;
@@ -6,14 +21,26 @@ export interface Student {
   phone: string;
   birthDate: string;
   address: string;
-  status: 'active' | 'inactive';
+  status: 'active' | 'inactive' | 'suspended';
   planType: 'basic' | 'premium' | 'vip';
   startDate: string;
   endDate: string;
   emergencyContact: string;
+  emergencyContactPhone?: string;
   medicalConditions?: string;
   assignedInstructor?: string;
   paymentStatus: 'paid' | 'pending' | 'overdue';
+  lastPaymentDate?: string;
+  nextPaymentDate?: string;
+  paymentMethod?: PaymentMethod;
+  paymentHistory?: PaymentHistory[];
+  monthlyFee?: number;
+  avatar?: string;
+  gender?: 'male' | 'female' | 'other' | 'prefer_not_to_say';
+  instructorName?: string;
+  registrationDate?: string;
+  updatedAt?: string;
+  notes?: string;
 }
 
 export interface Instructor {

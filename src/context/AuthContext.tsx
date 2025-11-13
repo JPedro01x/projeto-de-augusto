@@ -48,65 +48,78 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         alert('Não foi possível conectar ao servidor. Verifique se o backend está rodando.');
         return false;
       }
-
-      console.log('Enviando requisição para:', `${API_BASE}/auth/login`);
-      const res = await fetch(`${API_BASE}/auth/login`, {
+      
+      const response = await fetch('http://localhost:3000/api/auth/login', {
         method: 'POST',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json'
         },
         body: JSON.stringify({ email, password }),
         credentials: 'include' // Importante para enviar cookies se estiver usando
       });
-      
+
       console.log('Resposta do servidor:', {
-        status: res.status,
-        statusText: res.statusText,
-        headers: Object.fromEntries(res.headers.entries())
+        status: response.status,
+        statusText: response.statusText
       });
       
-      if (!res.ok) {
+      if (!response.ok) {
         let errorData;
         try {
-          errorData = await res.json();
+          errorData = await response.json();
           console.error('Erro na resposta:', errorData);
         } catch (e) {
-          const text = await res.text();
+          const text = await response.text();
           console.error('Erro ao processar resposta de erro:', text);
-          throw new Error(`Erro no servidor: ${res.status} ${res.statusText}`);
+          throw new Error(`Erro no servidor: ${response.status} ${response.statusText}`);
         }
         throw new Error(errorData.message || 'Falha na autenticação');
       }
-      const data = await res.json();
-      // data: { token, user: { id, name, email, userType } }
+
+      const data = await response.json();
+      const { token, user: userData } = data;
+      
+      // Mapear o usuário para o formato esperado
+      console.log('Dados recebidos do servidor:', data);
+      console.log('Token recebido:', token);
+      console.log('Dados do usuário recebidos:', userData);
+
+      // Mapear o usuário para o formato esperado
       const mappedUser: User = {
-        id: String(data.user.id),
-        name: data.user.name,
-        email: data.user.email,
-        role: data.user.userType as UserRole,
+        id: String(userData.user?.id || userData.id || ''),
+        name: userData.user?.name || userData.name || '',
+        email: userData.user?.email || userData.email || '',
+        role: (userData.userType || userData.user?.userType || userData.role || 'student').toLowerCase() as UserRole,
+        cpf: userData.user?.cpf || userData.cpf,
+        phone: userData.user?.phone || userData.phone
       };
 
+      console.log('Usuário mapeado para o contexto:', mappedUser);
+
+      // Armazenar o token e o usuário
+      const storage = rememberMe ? localStorage : sessionStorage;
+      storage.setItem('token', token);
+      storage.setItem('user', JSON.stringify(mappedUser));
+      
+      // Definir o usuário no estado
       setUser(mappedUser);
 
-      const storage = rememberMe ? localStorage : sessionStorage;
-      storage.setItem('user', JSON.stringify(mappedUser));
-      storage.setItem('token', data.token);
-
-      // Navigate based on role
-      if (mappedUser.role === 'admin') {
-        navigate('/admin');
-      } else if (mappedUser.role === 'instructor') {
-        // Verificar se o usuário tem permissão para acessar a rota de instrutor
-        if (data.user.userType === 'instructor') {
-          navigate('/instructor');
+      // Navegar com base na função do usuário com pequeno atraso para garantir a atualização do estado
+      setTimeout(() => {
+        console.log('Redirecionando usuário com função:', mappedUser.role);
+        if (mappedUser.role === 'admin') {
+          console.log('Redirecionando para /admin');
+          navigate('/admin');
+        } else if (mappedUser.role === 'instructor') {
+          console.log('Redirecionando para /instructor/dashboard');
+          navigate('/instructor/dashboard');
         } else {
-          console.error('Usuário não tem permissão para acessar a área de instrutor');
-          throw new Error('Acesso não autorizado');
+          console.log('Redirecionando para /student/dashboard');
+          navigate('/student/dashboard');
         }
-      } else {
-        navigate('/student');
-      }
+      }, 100);
+      
       return true;
     } catch (e) {
       return false;

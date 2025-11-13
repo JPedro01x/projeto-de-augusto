@@ -74,8 +74,16 @@ export default function InstructorStudents() {
               <CardContent className="p-6">
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center space-x-4">
-                    <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-                      <User className="h-6 w-6 text-primary" />
+                    <div className="h-12 w-12 rounded-full overflow-hidden bg-gray-200 flex-shrink-0">
+                      <img 
+                        src="/images/avatars/default-avatar.png" 
+                        alt={student.name}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.src = 'https://via.placeholder.com/150';
+                        }}
+                      />
                     </div>
                     <div>
                       <h3 className="font-semibold">{student.name}</h3>

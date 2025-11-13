@@ -36,157 +36,200 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <Routes>
+            {/* Rota raiz redireciona para login */}
             <Route path="/" element={<Navigate to="/login" replace />} />
             <Route path="/login" element={<Login />} />
-            
-            {/* Admin Routes */}
-            <Route
-              path="/admin"
-              element={
-                <ProtectedRoute allowedRoles={['admin']}>
-                  <Layout>
-                    <Dashboard />
-                  </Layout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/students"
-              element={
-                <ProtectedRoute allowedRoles={['admin']}>
-                  <Layout>
-                    <Students />
-                  </Layout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/instructors"
-              element={
-                <ProtectedRoute allowedRoles={['admin']}>
-                  <Layout>
-                    <Instructors />
-                  </Layout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/workouts"
-              element={
-                <ProtectedRoute allowedRoles={['admin']}>
-                  <Layout>
-                    <Workouts />
-                  </Layout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/attendance"
-              element={
-                <ProtectedRoute allowedRoles={['admin']}>
-                  <Layout>
-                    <Attendance />
-                  </Layout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/financial"
-              element={
-                <ProtectedRoute allowedRoles={['admin']}>
-                  <Layout>
-                    <Financial />
-                  </Layout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/settings"
-              element={
-                <ProtectedRoute allowedRoles={['admin']}>
-                  <Layout>
-                    <Settings />
-                  </Layout>
-                </ProtectedRoute>
-              }
-            />
-            
-            {/* Instructor Routes */}
-            <Route
-              path="/instructor"
-              element={
-                <ProtectedRoute allowedRoles={['instructor']}>
-                  <Layout>
-                    <InstructorDashboard />
-                  </Layout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/instructor/students"
-              element={
-                <ProtectedRoute allowedRoles={['instructor']}>
-                  <Layout>
-                    <InstructorStudents />
-                  </Layout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/instructor/workouts"
-              element={
-                <ProtectedRoute allowedRoles={['instructor']}>
-                  <Layout>
-                    <InstructorWorkouts />
-                  </Layout>
-                </ProtectedRoute>
-              }
-            />
-
-            {/* Student Routes */}
-            <Route
-              path="/student"
-              element={
-                <ProtectedRoute allowedRoles={['student']}>
-                  <StudentDashboard />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/student/attendance"
-              element={
-                <ProtectedRoute allowedRoles={['student']}>
-                  <StudentAttendance />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/student/finance"
-              element={
-                <ProtectedRoute allowedRoles={['student']}>
-                  <StudentFinance />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/student/trainers"
-              element={
-                <ProtectedRoute allowedRoles={['student']}>
-                  <StudentTrainers />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/student/workouts"
-              element={
-                <ProtectedRoute allowedRoles={['student']}>
-                  <StudentWorkouts />
-                </ProtectedRoute>
-              }
-            />
-
             <Route path="/unauthorized" element={<Unauthorized />} />
             
+            {/* ====================== */}
+            {/* ROTAS DE ADMINISTRADOR */}
+            {/* ====================== */}
+            <Route path="/admin">
+              <Route 
+                index 
+                element={
+                  <ProtectedRoute allowedRoles={['admin']}>
+                    <Layout>
+                      <Dashboard />
+                    </Layout>
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="students" 
+                element={
+                  <ProtectedRoute allowedRoles={['admin']}>
+                    <Layout>
+                      <Students />
+                    </Layout>
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="instructors" 
+                element={
+                  <ProtectedRoute allowedRoles={['admin']}>
+                    <Layout>
+                      <Instructors />
+                    </Layout>
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="workouts" 
+                element={
+                  <ProtectedRoute allowedRoles={['admin']}>
+                    <Layout>
+                      <Workouts />
+                    </Layout>
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="attendance" 
+                element={
+                  <ProtectedRoute allowedRoles={['admin']}>
+                    <Layout>
+                      <Attendance />
+                    </Layout>
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="financial" 
+                element={
+                  <ProtectedRoute allowedRoles={['admin']}>
+                    <Layout>
+                      <Financial />
+                    </Layout>
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="settings" 
+                element={
+                  <ProtectedRoute allowedRoles={['admin']}>
+                    <Layout>
+                      <Settings />
+                    </Layout>
+                  </ProtectedRoute>
+                } 
+              />
+            </Route>
+
+            {/* ===================== */}
+            {/* ROTAS DE INSTRUTOR */}
+            {/* ===================== */}
+            <Route path="/instructor">
+              <Route 
+                index 
+                element={
+                  <ProtectedRoute allowedRoles={['instructor']}>
+                    <Layout>
+                      <InstructorDashboard />
+                    </Layout>
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="dashboard" 
+                element={
+                  <ProtectedRoute allowedRoles={['instructor']}>
+                    <Layout>
+                      <InstructorDashboard />
+                    </Layout>
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="students" 
+                element={
+                  <ProtectedRoute allowedRoles={['instructor']}>
+                    <Layout>
+                      <InstructorStudents />
+                    </Layout>
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="workouts" 
+                element={
+                  <ProtectedRoute allowedRoles={['instructor']}>
+                    <Layout>
+                      <InstructorWorkouts />
+                    </Layout>
+                  </ProtectedRoute>
+                } 
+              />
+            </Route>
+
+            {/* ================= */}
+            {/* ROTAS DE ALUNO */}
+            {/* ================= */}
+            <Route path="/student">
+              <Route 
+                index 
+                element={
+                  <ProtectedRoute allowedRoles={['student']}>
+                    <StudentLayout>
+                      <StudentDashboard />
+                    </StudentLayout>
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="dashboard" 
+                element={
+                  <ProtectedRoute allowedRoles={['student']}>
+                    <StudentLayout>
+                      <StudentDashboard />
+                    </StudentLayout>
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="attendance" 
+                element={
+                  <ProtectedRoute allowedRoles={['student']}>
+                    <StudentLayout>
+                      <StudentAttendance />
+                    </StudentLayout>
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="finance" 
+                element={
+                  <ProtectedRoute allowedRoles={['student']}>
+                    <StudentLayout>
+                      <StudentFinance />
+                    </StudentLayout>
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="trainers" 
+                element={
+                  <ProtectedRoute allowedRoles={['student']}>
+                    <StudentLayout>
+                      <StudentTrainers />
+                    </StudentLayout>
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="workouts" 
+                element={
+                  <ProtectedRoute allowedRoles={['student']}>
+                    <StudentLayout>
+                      <StudentWorkouts />
+                    </StudentLayout>
+                  </ProtectedRoute>
+                } 
+              />
+            </Route>
+
+            {/* Rota 404 - Página não encontrada */}
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>

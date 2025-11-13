@@ -30,6 +30,9 @@ export class User {
   @Column({ type: 'text', nullable: true })
   address?: string;
 
+  @Column({ type: 'varchar', length: 20, nullable: true })
+  gender?: string;
+
   @Column({ type: 'enum', enum: ['admin', 'instructor', 'student'], name: 'user_type' })
   userType!: UserRole;
 

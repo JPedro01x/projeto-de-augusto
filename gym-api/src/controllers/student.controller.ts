@@ -47,9 +47,66 @@ export const createStudent = async (req: Request, res: Response) => {
 };
 
 export const listStudents = async (_req: Request, res: Response) => {
-  const repo = AppDataSource.getRepository(Student);
-  const items = await repo.find({ relations: { user: true } });
-  return res.json(items);
+  try {
+    const studentRepo = AppDataSource.getRepository(Student);
+    // Primeiro, buscamos os alunos sem selecionar colunas específicas para evitar erros
+    const students = await studentRepo.find({ 
+      relations: { 
+        user: true,
+        instructor: { user: true }
+      }
+    });
+
+    // Mapear os dados para o formato esperado pelo frontend
+    const formattedStudents = students
+      .map(student => {
+        if (!student.user) {
+          console.error('User not found for student:', student.userId);
+          return null;
+        }
+
+        // Garantir que todos os campos necessários estejam presentes
+        return {
+          id: student.user.id.toString(),
+          userId: student.user.id,
+          name: student.user.name || 'Não informado',
+          email: student.user.email || 'Não informado',
+          cpf: student.user.cpf || 'Não informado',
+          phone: student.user.phone || 'Não informado',
+          birthDate: student.user.birthDate || null,
+          address: student.user.address || 'Não informado',
+          gender: student.gender || student.user.gender || 'not_specified',
+          status: student.user.status || 'inactive',
+          planType: student.planType || 'basic',
+          startDate: student.startDate || null,
+          endDate: student.endDate || null,
+          emergencyContact: student.emergencyContactName || 'Não informado',
+          emergencyContactPhone: student.emergencyContactPhone || 'Não informado',
+          medicalConditions: student.healthConditions || 'Nenhuma condição médica informada',
+          registrationDate: student.registrationDate || student.createdAt?.toISOString() || new Date().toISOString(),
+          paymentStatus: student.paymentStatus || 'pending',
+          lastPaymentDate: student.lastPaymentDate?.toISOString() || null,
+          nextPaymentDate: student.nextPaymentDate?.toISOString() || null,
+          avatar: student.avatar || '/images/avatars/default-avatar.png',
+          assignedInstructor: student.instructor ? student.instructor.userId.toString() : '',
+          instructorName: student.instructor?.user?.name || 'Não atribuído',
+          updatedAt: student.updatedAt?.toISOString() || new Date().toISOString(),
+          age: student.user.birthDate ? 
+            (new Date().getFullYear() - new Date(student.user.birthDate).getFullYear()) : null
+        };
+      })
+      .filter((student): student is NonNullable<typeof student> => student !== null);
+
+    return res.json(formattedStudents);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+    console.error('Erro ao listar alunos:', error);
+    return res.status(500).json({ 
+      message: 'Erro ao listar alunos',
+      error: errorMessage,
+      stack: process.env.NODE_ENV === 'development' ? (error as Error).stack : undefined
+    });
+  }
 };
 
 export const updateStudent = async (req: Request, res: Response) => {

@@ -8,10 +8,28 @@ export function useStudents() {
   const { toast } = useToast();
 
   // Listar todos os alunos
-  const { data: students, isLoading, error } = useQuery({
+  const { data: studentsData, isLoading, error } = useQuery({
     queryKey: ['students'],
     queryFn: studentAPI.list,
+    select: (data) => {
+      // Garantir que todos os campos necessários estejam presentes
+      return data.map((student: any) => ({
+        ...student,
+        cpf: student.cpf || 'Não informado',
+        phone: student.phone || 'Não informado',
+        address: student.address || 'Não informado',
+        emergencyContact: student.emergencyContact || 'Não informado',
+        emergencyContactPhone: student.emergencyContactPhone || 'Não informado',
+        medicalConditions: student.medicalConditions || 'Nenhuma condição médica informada',
+        planType: student.planType || 'Não definido',
+        status: student.status || 'inactive',
+        avatar: student.avatar || '/images/avatars/default-avatar.png',
+        gender: student.gender || 'not_specified'
+      }));
+    },
   });
+
+  const students = studentsData || [];
 
   // Criar aluno
   const createStudent = useMutation({

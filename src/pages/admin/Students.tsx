@@ -5,15 +5,18 @@ import { StudentForm } from '@/components/students/student-form';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Plus, Search, Edit, Trash2, CheckCircle, XCircle, Activity } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, CheckCircle, XCircle, Activity, Dumbbell, Eye } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAttendance } from '@/hooks/use-attendance';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { StudentProfile } from '@/components/students/student-profile';
 
 export default function Students() {
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<Student | undefined>();
+  const [viewingStudent, setViewingStudent] = useState<Student | null>(null);
   const { students = [], updateStudent, deleteStudent, isLoading } = useStudents();
   const { getAttendanceStats } = useAttendance();
 
@@ -36,9 +39,10 @@ export default function Students() {
   const toggleStatus = async (id: string) => {
     const student = students?.find(s => s.id === id);
     if (student) {
+      const newStatus = student.status === 'active' ? 'inactive' : 'active' as const;
       await updateStudent.mutateAsync({
         id,
-        data: { status: student.status === 'active' ? 'inactive' : 'active' }
+        data: { status: newStatus }
       });
     }
   };
@@ -46,6 +50,20 @@ export default function Students() {
   const handleEdit = (student: Student) => {
     setSelectedStudent(student);
     setIsDialogOpen(true);
+  };
+
+  const handleViewProfile = (student: Student) => {
+    // Garantir que todos os campos obrigatórios estejam presentes
+    const studentWithDefaults: Student = {
+      ...student,
+      emergencyContact: student.emergencyContact || '',
+      paymentStatus: student.paymentStatus || 'pending',
+      startDate: student.startDate || new Date().toISOString(),
+      endDate: student.endDate || '',
+      planType: student.planType || 'basic',
+      status: student.status || 'active',
+    };
+    setViewingStudent(studentWithDefaults);
   };
 
   const handleAdd = () => {
@@ -103,8 +121,16 @@ export default function Students() {
                 <CardContent className="p-4 md:p-6">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div className="flex items-start gap-3 md:gap-4">
-                      <div className="w-10 h-10 md:w-12 md:h-12 rounded-full gradient-primary flex items-center justify-center text-primary-foreground font-bold text-lg shrink-0">
-                        {student.name.charAt(0)}
+                      <div className="w-10 h-10 md:w-12 md:h-12 rounded-full overflow-hidden bg-gray-200 flex-shrink-0">
+                        <img 
+                          src="/images/avatars/default-avatar.png" 
+                          alt={student.name}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.src = 'https://via.placeholder.com/150';
+                          }}
+                        />
                       </div>
                       <div className="space-y-1 min-w-0">
                         <h3 className="font-semibold text-base md:text-lg truncate">{student.name}</h3>
@@ -121,7 +147,9 @@ export default function Students() {
                             className={`px-2 py-1 rounded-md text-xs font-medium flex items-center gap-1 ${
                               student.status === 'active'
                                 ? 'bg-green-500/20 text-green-500'
-                                : 'bg-red-500/20 text-red-500'
+                                : student.status === 'inactive'
+                                ? 'bg-red-500/20 text-red-500'
+                                : 'bg-yellow-500/20 text-yellow-500'
                             }`}
                           >
                             {student.status === 'active' ? (
@@ -129,7 +157,8 @@ export default function Students() {
                             ) : (
                               <XCircle className="h-3 w-3" />
                             )}
-                            {student.status === 'active' ? 'Ativo' : 'Inativo'}
+                            {student.status === 'active' ? 'Ativo' : 
+                             student.status === 'inactive' ? 'Inativo' : 'Suspenso'}
                           </span>
                         </div>
                       </div>
@@ -148,6 +177,14 @@ export default function Students() {
                         ) : (
                           <CheckCircle className="h-4 w-4" />
                         )}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => handleViewProfile(student)}
+                        title="Ver perfil"
+                      >
+                        <Eye className="h-4 w-4" />
                       </Button>
                       <Button
                         variant="outline"
@@ -200,6 +237,15 @@ export default function Students() {
           onOpenChange={setIsDialogOpen}
           student={selectedStudent}
         />
+
+        <Dialog open={!!viewingStudent} onOpenChange={(open) => !open && setViewingStudent(null)}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Perfil do Aluno</DialogTitle>
+            </DialogHeader>
+            {viewingStudent && <StudentProfile student={viewingStudent} />}
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

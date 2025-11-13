@@ -270,7 +270,189 @@ WHERE user_type='student'
 ORDER BY created_at DESC;
 -- hash_len deve ser ~60
 
+DESCRIBE instructors;
 
-USE mysql;
-ALTER USER 'root'@'localhost' IDENTIFIED BY 'sua_nova_senha';
-FLUSH PRIVILEGES;
+-- =============================================
+-- ADIÇÃO DE EXERCÍCIOS
+-- =============================================
+
+-- Inserir exercícios
+INSERT INTO exercises (name, description, muscle_group, difficulty, created_at, updated_at) VALUES
+-- Exercícios para Peito e Tríceps
+('Supino Reto', 'Deitado no banco, segure a barra com as mãos afastadas na largura dos ombros e empurre para cima', 'Peitoral', 'intermediate', NOW(), NOW()),
+('Supino Inclinado', 'Deitado em banco inclinado, segure a barra e empurre para cima', 'Peitoral Superior', 'intermediate', NOW(), NOW()),
+('Crucifixo', 'Deitado no banco, com halteres, abra os braços em um movimento de abraço', 'Peitoral', 'beginner', NOW(), NOW()),
+('Tríceps Testa', 'Deitado no banco, segure a barra com as mãos próximas e desça em direção à testa', 'Tríceps', 'intermediate', NOW(), NOW()),
+-- Exercícios para Costas e Bíceps
+('Puxada Frontal', 'Sentado no aparelho, puxe a barra em direção ao peito', 'Costas', 'beginner', NOW(), NOW()),
+('Remada Curvada', 'Inclinado para frente, puxe a barra em direção à cintura', 'Costas', 'intermediate', NOW(), NOW()),
+('Rosca Direta', 'Em pé, com halteres ou barra, flexione os cotovelos levantando o peso', 'Bíceps', 'beginner', NOW(), NOW()),
+-- Exercícios para Full Body
+('Agachamento', 'Pés na largura dos ombros, desça como se fosse sentar', 'Pernas', 'beginner', NOW(), NOW()),
+('Flexão', 'Apoie as mãos no chão e desça o corpo mantendo-o reto', 'Peitoral, Tríceps', 'beginner', NOW(), NOW()),
+('Burpee', 'Agache, coloque as mãos no chão, jogue os pés para trás, faça uma flexão, pule para frente e salte', 'Corpo Inteiro', 'advanced', NOW(), NOW());
+
+-- =============================================
+-- ADIÇÃO DE TREINOS
+-- =============================================
+
+-- Obter IDs dos instrutores e alunos
+SET @carlos_id = (SELECT id FROM users WHERE email = 'carlos@gmail.com');
+SET @maria_id = (SELECT id FROM users WHERE email = 'maria@gmail.com');
+SET @joao_id = (SELECT id FROM users WHERE name = 'João Silva' LIMIT 1);
+SET @maria_aluno_id = (SELECT id FROM users WHERE name = 'Maria Santos' AND user_type = 'student' LIMIT 1);
+SET @pedro_id = (SELECT id FROM users WHERE name = 'Pedro Costa' LIMIT 1);
+
+-- Se os alunos não existirem, insira-os
+INSERT IGNORE INTO users (name, email, password_hash, user_type, status, created_at, updated_at) VALUES
+('João Silva', 'joao@gmail.com', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'student', 'active', NOW(), NOW()),
+('Maria Santos', 'mariastudant@email.com', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'student', 'active', NOW(), NOW()),
+('Pedro Costa', 'pedro@gmail.com', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'student', 'active', NOW(), NOW());
+
+-- Inserir alunos na tabela students se não existirem
+INSERT IGNORE INTO students (user_id, registration_date, instructor_id)
+SELECT id, CURDATE(), @carlos_id FROM users WHERE email = 'joao@gmail' AND NOT EXISTS (SELECT 1 FROM students WHERE user_id = (SELECT id FROM users WHERE email = 'joao@gmail'));
+
+INSERT IGNORE INTO students (user_id, registration_date, instructor_id)
+SELECT id, CURDATE(), @carlos_id FROM users WHERE email = 'mariastudant@email.com' AND NOT EXISTS (SELECT 1 FROM students WHERE user_id = (SELECT id FROM users WHERE email = 'mariastudant@email.com'));
+
+INSERT IGNORE INTO students (user_id, registration_date, instructor_id)
+SELECT id, CURDATE(), @maria_id FROM users WHERE email = 'pedro@gmail.com' AND NOT EXISTS (SELECT 1 FROM students WHERE user_id = (SELECT id FROM users WHERE email = 'pedro@gmail.com'));
+
+-- Atualizar variáveis com os IDs corretos
+SET @joao_id = (SELECT id FROM users WHERE email = 'joao@gmail.com');
+SET @maria_aluno_id = (SELECT id FROM users WHERE email = 'mariastudant@email.com');
+SET @pedro_id = (SELECT id FROM users WHERE email = 'pedro@gmail.com');
+
+-- Inserir treinos
+INSERT INTO workouts (name, description, instructor_id, student_id, start_date, end_date, status, goal, notes) VALUES
+('Treino A - Peito e Tríceps', 'Treino focado em desenvolvimento de peitoral e tríceps', @carlos_id, @joao_id, CURDATE(), DATE_ADD(CURDATE(), INTERVAL 30 DAY), 'active', 'Hipertrofia', 'Focar na execução correta dos movimentos'),
+('Treino B - Costas e Bíceps', 'Treino para desenvolvimento de costas e bíceps', @carlos_id, @maria_aluno_id, CURDATE(), DATE_ADD(CURDATE(), INTERVAL 30 DAY), 'active', 'Hipertrofia', 'Manter a coluna alinhada durante os exercícios'),
+('Treino Full Body', 'Treino completo para todo o corpo', @maria_id, @pedro_id, CURDATE(), DATE_ADD(CURDATE(), INTERVAL 30 DAY), 'active', 'Funcional', 'Manter o ritmo constante durante todo o treino');
+
+-- Obter IDs dos treinos recém-criados
+SET @treino_a_id = (SELECT id FROM workouts WHERE name = 'Treino A - Peito e Tríceps');
+SET @treino_b_id = (SELECT id FROM workouts WHERE name = 'Treino B - Costas e Bíceps');
+SET @treino_full_id = (SELECT id FROM workouts WHERE name = 'Treino Full Body');
+
+-- Obter IDs dos exercícios
+SET @supino_reto_id = (SELECT id FROM exercises WHERE name = 'Supino Reto');
+SET @supino_inclinado_id = (SELECT id FROM exercises WHERE name = 'Supino Inclinado');
+SET @crucifixo_id = (SELECT id FROM exercises WHERE name = 'Crucifixo');
+SET @triceps_testa_id = (SELECT id FROM exercises WHERE name = 'Tríceps Testa');
+SET @puxada_frontal_id = (SELECT id FROM exercises WHERE name = 'Puxada Frontal');
+SET @remada_curvada_id = (SELECT id FROM exercises WHERE name = 'Remada Curvada');
+SET @rosca_direta_id = (SELECT id FROM exercises WHERE name = 'Rosca Direta');
+SET @agachamento_id = (SELECT id FROM exercises WHERE name = 'Agachamento');
+SET @flexao_id = (SELECT id FROM exercises WHERE name = 'Flexão');
+SET @burpee_id = (SELECT id FROM exercises WHERE name = 'Burpee');
+
+-- Inserir itens do Treino A - Peito e Tríceps
+INSERT INTO workout_items (workout_id, exercise_id, sets, repetitions, weight, rest_seconds, order_in_workout, notes) VALUES
+(@treino_a_id, @supino_reto_id, 4, '12', 40.0, 60, 1, 'Manter as costas apoiadas no banco'),
+(@treino_a_id, @supino_inclinado_id, 3, '12', 35.0, 60, 2, 'Banco em 30 graus'),
+(@treino_a_id, @crucifixo_id, 3, '15', 12.0, 45, 3, 'Controle o movimento na descida'),
+(@treino_a_id, @triceps_testa_id, 3, '12', 20.0, 60, 4, 'Manter os cotovelos parados');
+
+-- Inserir itens do Treino B - Costas e Bíceps
+INSERT INTO workout_items (workout_id, exercise_id, sets, repetitions, weight, rest_seconds, order_in_workout, notes) VALUES
+(@treino_b_id, @puxada_frontal_id, 4, '12', 50.0, 60, 1, 'Puxar a barra em direção ao peito'),
+(@treino_b_id, @remada_curvada_id, 4, '10', 30.0, 50, 2, 'Manter as costas retas'),
+(@treino_b_id, @rosca_direta_id, 3, '12', 15.0, 60, 3, 'Não balançar o corpo');
+
+-- Inserir itens do Treino Full Body
+INSERT INTO workout_items (workout_id, exercise_id, sets, repetitions, weight, rest_seconds, order_in_workout, notes) VALUES
+(@treino_full_id, @agachamento_id, 4, '15', 0, 90, 1, 'Manter as costas retas e descer até 90 graus'),
+(@treino_full_id, @flexao_id, 3, '15', 0, 60, 2, 'Manter o corpo alinhado'),
+(@treino_full_id, @burpee_id, 3, '10', 0, 60, 3, 'Manter o ritmo constante');
+
+-- Script para adicionar instrutores ao banco de dados
+-- Senha padrão: Senha123@ (já com hash)
+
+-- Inserir usuários dos instrutores
+INSERT INTO users (name, email, password_hash, cpf, phone, user_type, status) VALUES
+-- Carlos Silva
+(
+    'Carlos Silva',
+    'carlos@gmail.com',
+    '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', -- Senha123@
+    '123.456.789-00',
+    '(11) 98765-4321',
+    'instructor',
+    'active'
+),
+-- Maria Santos
+(
+    'Maria Santos',
+    'maria@gmail.com',
+    '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', -- Senha123@
+    '987.654.321-00',
+    '(11) 91234-5678',
+    'instructor',
+    'active'
+),
+-- Roberto Lima
+(
+    'Roberto Lima',
+    'roberto@gmail.com',
+    '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', -- Senha123@
+    '456.789.123-00',
+    '(11) 99876-5432',
+    'instructor',
+    'active'
+);
+
+-- Inserir os dados específicos dos instrutores
+-- OBS: Substitua os IDs pelos IDs reais gerados na inserção anterior
+INSERT INTO instructors (user_id, specialty, hire_date, salary, certifications)
+SELECT 
+    id,
+    CASE 
+        WHEN email = 'carlos@gmail.com' THEN 'Musculação e Hipertrofia'
+        WHEN email = 'maria@gmail.com' THEN 'Crossfit e Condicionamento'
+        WHEN email = 'roberto@gmail.com' THEN 'Treinamento Funcional'
+    END as specialty,
+    CASE 
+        WHEN email = 'carlos@gmail.com' THEN '2023-01-15'
+        WHEN email = 'maria@gmail.com' THEN '2023-02-20'
+        WHEN email = 'roberto@gmail.com' THEN '2023-03-10'
+    END as hire_date,
+    CASE 
+        WHEN email = 'carlos@gmail.com' THEN 3500.00
+        WHEN email = 'maria@gmail.com' THEN 3800.00
+        WHEN email = 'roberto@gmail.com' THEN 3200.00
+    END as salary,
+    CASE 
+        WHEN email = 'carlos@gmail.com' THEN 'CREF 123456, Personal Trainer'
+        WHEN email = 'maria@gmail.com' THEN 'CREF 789012, CrossFit Level 2'
+        WHEN email = 'roberto@gmail.com' THEN 'CREF 345678, TRX Certification'
+    END as certifications
+FROM users 
+WHERE email IN ('carlos@gmail.com', 'maria@gmail.com', 'roberto@gmail.com')
+AND user_type = 'instructor';
+
+-- Atualizar a data de criação para refletir a data de contratação
+UPDATE users u
+JOIN instructors i ON u.id = i.user_id
+SET u.created_at = i.hire_date
+WHERE u.email IN ('carlos@gmail.com', 'maria@gmail.com', 'roberto@gmail.com');
+
+-- Verificar os dados inseridos
+SELECT 
+    u.id,
+    u.name,
+    u.email,
+    u.phone,
+    i.specialty,
+    i.hire_date,
+    i.salary,
+    i.certifications,
+    u.status
+FROM 
+    users u
+JOIN 
+    instructors i ON u.id = i.user_id
+WHERE 
+    u.email IN ('carlos@gmail.com', 'maria@gmail.com', 'roberto@gmail.com');
+    
+ALTER TABLE students ADD COLUMN avatar VARCHAR(255) NULL;

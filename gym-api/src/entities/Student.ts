@@ -39,4 +39,28 @@ export class Student {
 
   @OneToMany(() => WorkoutPlan, workoutPlan => workoutPlan.student)
   workoutPlans?: WorkoutPlan[];
+
+  @Column({ nullable: true })
+  avatar?: string;
+
+  @Column({ name: 'plan_type', type: 'varchar', length: 50, nullable: true })
+  planType?: string;
+
+  @Column({ name: 'start_date', type: 'date', nullable: true })
+  startDate?: Date;
+
+  @Column({ name: 'end_date', type: 'date', nullable: true })
+  endDate?: Date;
+
+  @Column({ name: 'payment_status', type: 'varchar', length: 50, nullable: true })
+  paymentStatus?: string;
+
+  @Column({ name: 'last_payment_date', type: 'date', nullable: true })
+  lastPaymentDate?: Date;
+
+  @Column({ name: 'next_payment_date', type: 'date', nullable: true })
+  nextPaymentDate?: Date;
+
+  @Column({ type: 'varchar', length: 20, nullable: true })
+  gender?: string;
 }

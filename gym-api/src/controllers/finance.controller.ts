@@ -180,16 +180,229 @@ export const getPayments = async (req: Request, res: Response) => {
     
     res.json(payments.map(payment => ({
       id: payment.id,
+      studentId: payment.studentPlan?.student?.id,
       studentName: payment.studentPlan?.student?.name || 'Aluno não encontrado',
       planType: payment.planType,
       dueDate: payment.dueDate,
       paymentDate: payment.paymentDate,
       amount: payment.amount,
       status: payment.status,
-      paymentMethod: payment.paymentMethod || 'Não especificado'
+      paymentMethod: payment.paymentMethod || 'Não especificado',
+      notes: payment.notes
     })));
   } catch (error) {
     console.error('Erro ao buscar pagamentos:', error);
     res.status(500).json({ message: 'Erro ao buscar pagamentos' });
+  }
+};
+
+export const getPaymentById = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const paymentRepository = AppDataSource.getRepository(Payment);
+    
+    const payment = await paymentRepository.findOne({
+      where: { id: Number(id) },
+      relations: ['studentPlan', 'studentPlan.student']
+    });
+    
+    if (!payment) {
+      return res.status(404).json({ message: 'Pagamento não encontrado' });
+    }
+    
+    res.json({
+      id: payment.id,
+      studentId: payment.studentPlan?.student?.id,
+      studentName: payment.studentPlan?.student?.name || 'Aluno não encontrado',
+      planType: payment.planType,
+      dueDate: payment.dueDate,
+      paymentDate: payment.paymentDate,
+      amount: payment.amount,
+      status: payment.status,
+      paymentMethod: payment.paymentMethod || 'Não especificado',
+      notes: payment.notes,
+      receiptUrl: payment.receiptUrl
+    });
+  } catch (error) {
+    console.error('Erro ao buscar pagamento:', error);
+    res.status(500).json({ message: 'Erro ao buscar pagamento' });
+  }
+};
+
+export const createPayment = async (req: Request, res: Response) => {
+  try {
+    const { studentPlanId, amount, dueDate, paymentDate, status, paymentMethod, notes } = req.body;
+    const paymentRepository = AppDataSource.getRepository(Payment);
+    const studentPlanRepository = AppDataSource.getRepository(StudentPlan);
+    
+    // Verificar se o plano do aluno existe
+    const studentPlan = await studentPlanRepository.findOne({
+      where: { id: studentPlanId },
+      relations: ['student']
+    });
+    
+    if (!studentPlan) {
+      return res.status(404).json({ message: 'Plano do aluno não encontrado' });
+    }
+    
+    // Criar o pagamento
+    const payment = paymentRepository.create({
+      studentPlanId,
+      amount,
+      dueDate: new Date(dueDate),
+      paymentDate: paymentDate ? new Date(paymentDate) : null,
+      status: status || 'pending',
+      paymentMethod,
+      notes,
+      planType: studentPlan.planType as any
+    });
+    
+    await paymentRepository.save(payment);
+    
+    res.status(201).json({
+      id: payment.id,
+      studentId: studentPlan.student?.id,
+      studentName: studentPlan.student?.name || 'Aluno não encontrado',
+      planType: payment.planType,
+      dueDate: payment.dueDate,
+      paymentDate: payment.paymentDate,
+      amount: payment.amount,
+      status: payment.status,
+      paymentMethod: payment.paymentMethod,
+      notes: payment.notes
+    });
+  } catch (error) {
+    console.error('Erro ao criar pagamento:', error);
+    res.status(500).json({ message: 'Erro ao criar pagamento' });
+  }
+};
+
+export const updatePayment = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { amount, dueDate, paymentDate, status, paymentMethod, notes } = req.body;
+    const paymentRepository = AppDataSource.getRepository(Payment);
+    
+    const payment = await paymentRepository.findOne({
+      where: { id: Number(id) },
+      relations: ['studentPlan', 'studentPlan.student']
+    });
+    
+    if (!payment) {
+      return res.status(404).json({ message: 'Pagamento não encontrado' });
+    }
+    
+    // Atualizar campos do pagamento
+    if (amount !== undefined) payment.amount = amount;
+    if (dueDate) payment.dueDate = new Date(dueDate);
+    if (paymentDate !== undefined) payment.paymentDate = paymentDate ? new Date(paymentDate) : null;
+    if (status) payment.status = status as PaymentStatus;
+    if (paymentMethod !== undefined) payment.paymentMethod = paymentMethod;
+    if (notes !== undefined) payment.notes = notes;
+    
+    await paymentRepository.save(payment);
+    
+    res.json({
+      id: payment.id,
+      studentId: payment.studentPlan?.student?.id,
+      studentName: payment.studentPlan?.student?.name || 'Aluno não encontrado',
+      planType: payment.planType,
+      dueDate: payment.dueDate,
+      paymentDate: payment.paymentDate,
+      amount: payment.amount,
+      status: payment.status,
+      paymentMethod: payment.paymentMethod,
+      notes: payment.notes
+    });
+  } catch (error) {
+    console.error('Erro ao atualizar pagamento:', error);
+    res.status(500).json({ message: 'Erro ao atualizar pagamento' });
+  }
+};
+
+export const deletePayment = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const paymentRepository = AppDataSource.getRepository(Payment);
+    
+    const payment = await paymentRepository.findOne({
+      where: { id: Number(id) }
+    });
+    
+    if (!payment) {
+      return res.status(404).json({ message: 'Pagamento não encontrado' });
+    }
+    
+    await paymentRepository.remove(payment);
+    
+    res.status(204).send();
+  } catch (error) {
+    console.error('Erro ao excluir pagamento:', error);
+    res.status(500).json({ message: 'Erro ao excluir pagamento' });
+  }
+};
+
+// Solicitar pagamento (criar uma cobrança)
+export const requestPayment = async (req: Request, res: Response) => {
+  try {
+    const { studentId, amount, dueDate, description } = req.body;
+    
+    if (!studentId || !amount || !dueDate) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Dados incompletos. Forneça studentId, amount e dueDate.' 
+      });
+    }
+
+    const studentPlanRepository = AppDataSource.getRepository(StudentPlan);
+    const paymentRepository = AppDataSource.getRepository(Payment);
+    
+    // Encontrar o plano ativo do aluno
+    const studentPlan = await studentPlanRepository
+      .createQueryBuilder('studentPlan')
+      .leftJoinAndSelect('studentPlan.student', 'student')
+      .leftJoinAndSelect('studentPlan.plan', 'plan')
+      .where('student.id = :studentId', { studentId })
+      .andWhere('studentPlan.status = :status', { status: 'active' })
+      .orderBy('studentPlan.endDate', 'DESC')
+      .getOne();
+
+    if (!studentPlan) {
+      return res.status(404).json({ 
+        success: false,
+        message: 'Nenhum plano ativo encontrado para este aluno' 
+      });
+    }
+
+    // Mapear o tipo de plano para um valor válido do enum
+    const planType = (studentPlan.planType?.toLowerCase() || 'monthly') as 'monthly' | 'quarterly' | 'semiannual' | 'annual' | 'trial';
+    
+    // Criar o pagamento pendente
+    const payment = paymentRepository.create({
+      studentPlan,
+      amount: parseFloat(amount),
+      dueDate: new Date(dueDate),
+      status: 'pending' as PaymentStatus,
+      planType: planType,
+      notes: description || 'Cobrança de mensalidade',
+      paymentMethod: 'pendente',
+      receiptUrl: ''
+    });
+
+    await paymentRepository.save(payment);
+
+    // Aqui você pode adicionar lógica para enviar notificação por e-mail/SMS
+    
+    res.status(201).json({
+      success: true,
+      message: 'Cobrança criada com sucesso',
+      paymentId: payment.id
+    });
+  } catch (error) {
+    console.error('Erro ao criar cobrança:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Erro ao processar a solicitação de cobrança' 
+    });
   }
 };
