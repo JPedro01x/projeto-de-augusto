@@ -243,7 +243,7 @@ export default function Students() {
             <DialogHeader>
               <DialogTitle>Perfil do Aluno</DialogTitle>
             </DialogHeader>
-            {viewingStudent && <StudentProfile student={viewingStudent} />}
+            {viewingStudent && <StudentProfile student={viewingStudent} isAdmin={true} />}
           </DialogContent>
         </Dialog>
       </div>

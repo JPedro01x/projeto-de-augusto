@@ -7,6 +7,9 @@ import { StudentPlan } from "../entities/StudentPlan";
 import { Payment } from "../entities/Payment";
 import { Attendance } from "../entities/Attendance";
 import { WorkoutPlan } from "../entities/WorkoutPlan";
+import { Notification } from "../entities/Notification";
+import { GymSettings } from "../entities/GymSettings";
+import { Treino } from "../entities/Treino";
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -28,9 +31,14 @@ export const AppDataSource = new DataSource({
         StudentPlan,
         Payment,
         Attendance,
-        WorkoutPlan
+        WorkoutPlan,
+        Notification,
+        GymSettings,
+        Treino
     ],
-    migrations: [],
+    migrations: [
+        "src/migrations/*.ts"
+    ],
     subscribers: [],
 });
 

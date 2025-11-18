@@ -2,9 +2,10 @@ import { ReactNode, useEffect, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { LayoutDashboard, Calendar, DollarSign, Users, Dumbbell, LogOut, Menu, X, Sun, Moon } from 'lucide-react';
+import { LayoutDashboard, Calendar, DollarSign, Users, Dumbbell, LogOut, Menu, X, Sun, Moon, Bell } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useTheme } from 'next-themes';
+import { NotificationBell } from './notifications/NotificationBell';
 
 interface StudentLayoutProps { children: ReactNode }
 
@@ -68,23 +69,33 @@ const StudentLayout = ({ children }: StudentLayoutProps) => {
 
       <div className="flex-1 flex flex-col min-h-screen w-full">
         <header className="sticky top-0 z-30 border-b border-border bg-card/50 backdrop-blur-sm">
-          <div className="flex items-center gap-4 p-4">
-            <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setSidebarOpen(true)}>
-              <Menu className="h-5 w-5" />
-            </Button>
-            <div className="flex-1" />
+          <div className="h-16 flex items-center justify-between px-4">
             <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => {
-                  if (!mounted) return;
-                  const current = resolvedTheme || theme;
-                  setTheme(current === 'dark' ? 'light' : 'dark');
-                }}
-                aria-label="Toggle theme"
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="lg:hidden" 
+                onClick={() => setSidebarOpen(!sidebarOpen)}
               >
-                {mounted ? (resolvedTheme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />) : null}
+                <Menu className="h-5 w-5" />
+              </Button>
+              <h1 className="text-lg font-semibold">Área do Aluno</h1>
+            </div>
+            <div className="flex items-center gap-2">
+              <NotificationBell />
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
+              >
+                {mounted && resolvedTheme === 'dark' ? (
+                  <Sun className="h-5 w-5" />
+                ) : (
+                  <Moon className="h-5 w-5" />
+                )}
+              </Button>
+              <Button variant="ghost" size="icon" onClick={logout}>
+                <LogOut className="h-5 w-5" />
               </Button>
             </div>
           </div>

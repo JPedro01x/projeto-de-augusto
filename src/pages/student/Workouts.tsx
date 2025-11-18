@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react';
-import StudentLayout from '@/components/StudentLayout';
+import { useAuth } from '@/context/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Calendar, Dumbbell, Clock, ListChecks } from 'lucide-react';
-import { useAuth } from '@/context/AuthContext';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -94,34 +93,29 @@ export default function StudentWorkouts() {
 
   if (loading) {
     return (
-      <StudentLayout>
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-        </div>
-      </StudentLayout>
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      </div>
     );
   }
 
   if (error) {
     return (
-      <StudentLayout>
-        <div className="text-center py-12">
-          <p className="text-red-500">{error}</p>
-          <Button 
-            onClick={() => window.location.reload()} 
-            className="mt-4"
-            variant="outline"
-          >
-            Tentar novamente
-          </Button>
-        </div>
-      </StudentLayout>
+      <div className="text-center py-12">
+        <p className="text-red-500">{error}</p>
+        <Button 
+          onClick={() => window.location.reload()} 
+          className="mt-4"
+          variant="outline"
+        >
+          Tentar novamente
+        </Button>
+      </div>
     );
   }
 
   return (
-    <StudentLayout>
-      <div className="space-y-6">
+    <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold text-gradient">Meus Treinos</h1>
           <p className="text-muted-foreground">Rotinas e treinos atribuídos</p>
@@ -193,7 +187,6 @@ export default function StudentWorkouts() {
             ))}
           </div>
         )}
-      </div>
-    </StudentLayout>
+    </div>
   );
 }

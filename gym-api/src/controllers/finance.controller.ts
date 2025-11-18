@@ -4,6 +4,7 @@ import { Payment, PaymentStatus } from '../entities/Payment';
 import { StudentPlan } from '../entities/StudentPlan';
 import { User } from '../entities/User';
 import { Between, LessThanOrEqual, MoreThanOrEqual } from 'typeorm';
+import { notificationService } from '../services/notification.service';
 
 export const getFinancialSummary = async (req: Request, res: Response) => {
   try {
@@ -389,9 +390,20 @@ export const requestPayment = async (req: Request, res: Response) => {
       receiptUrl: ''
     });
 
-    await paymentRepository.save(payment);
+    const savedPayment = await paymentRepository.save(payment);
 
-    // Aqui você pode adicionar lógica para enviar notificação por e-mail/SMS
+    // Enviar notificação para o aluno sobre a nova cobrança
+    try {
+      await notificationService.notifyNewPayment(
+        studentPlan.student.id,
+        savedPayment.id,
+        savedPayment.amount,
+        savedPayment.dueDate
+      );
+    } catch (error) {
+      console.error('Erro ao enviar notificação:', error);
+      // Não queremos falhar a operação principal se a notificação falhar
+    }
     
     res.status(201).json({
       success: true,

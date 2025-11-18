@@ -36,7 +36,7 @@ export const getToken = (): string | null => {
 };
 
 // Função de requisição HTTP personalizada que inclui o token de autenticação
-const apiRequest = async <T>(
+export const apiRequest = async <T>(
   endpoint: string, 
   options: RequestInit = {}
 ): Promise<T> => {

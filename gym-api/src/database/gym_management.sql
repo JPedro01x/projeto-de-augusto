@@ -270,7 +270,104 @@ WHERE user_type='student'
 ORDER BY created_at DESC;
 -- hash_len deve ser ~60
 
+
 DESCRIBE instructors;
+
+
+
+
+
+-- Script para adicionar instrutores ao banco de dados
+-- Senha padrão: Senha123@ (já com hash)
+
+-- Inserir usuários dos instrutores
+INSERT INTO users (name, email, password_hash, cpf, phone, user_type, status) VALUES
+-- Carlos Silva
+(
+    'Carlos Silva',
+    'carlos@gmail.com',
+    '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', -- Senha123@
+    '123.456.789-00',
+    '(11) 98765-4321',
+    'instructor',
+    'active'
+),
+-- Maria Santos
+(
+    'Maria Santos',
+    'maria@gmail.com',
+    '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', -- Senha123@
+    '987.654.321-00',
+    '(11) 91234-5678',
+    'instructor',
+    'active'
+),
+-- Roberto Lima
+(
+    'Roberto Lima',
+    'roberto@gmail.com',
+    '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', -- Senha123@
+    '456.789.123-00',
+    '(11) 99876-5432',
+    'instructor',
+    'active'
+);
+
+-- Inserir os dados específicos dos instrutores
+-- OBS: Substitua os IDs pelos IDs reais gerados na inserção anterior
+INSERT INTO instructors (user_id, specialty, hire_date, salary, certifications)
+SELECT 
+    id,
+    CASE 
+        WHEN email = 'carlos@gmail.com' THEN 'Musculação e Hipertrofia'
+        WHEN email = 'maria@gmail.com' THEN 'Crossfit e Condicionamento'
+        WHEN email = 'roberto@gmail.com' THEN 'Treinamento Funcional'
+    END as specialty,
+    CASE 
+        WHEN email = 'carlos@gmail.com' THEN '2023-01-15'
+        WHEN email = 'maria@gmail.com' THEN '2023-02-20'
+        WHEN email = 'roberto@gmail.com' THEN '2023-03-10'
+    END as hire_date,
+    CASE 
+        WHEN email = 'carlos@gmail.com' THEN 3500.00
+        WHEN email = 'maria@gmail.com' THEN 3800.00
+        WHEN email = 'roberto@gmail.com' THEN 3200.00
+    END as salary,
+    CASE 
+        WHEN email = 'carlos@gmail.com' THEN 'CREF 123456, Personal Trainer'
+        WHEN email = 'maria@gmail.com' THEN 'CREF 789012, CrossFit Level 2'
+        WHEN email = 'roberto@gmail.com' THEN 'CREF 345678, TRX Certification'
+    END as certifications
+FROM users 
+WHERE email IN ('carlos@gmail.com', 'maria@gmail.com', 'roberto@gmail.com')
+AND user_type = 'instructor';
+
+-- Atualizar a data de criação para refletir a data de contratação
+UPDATE users u
+JOIN instructors i ON u.id = i.user_id
+SET u.created_at = i.hire_date
+WHERE u.email IN ('carlos@gmail.com', 'maria@gmail.com', 'roberto@gmail.com');
+
+-- Verificar os dados inseridos
+SELECT 
+    u.id,
+    u.name,
+    u.email,
+    u.phone,
+    i.specialty,
+    i.hire_date,
+    i.salary,
+    i.certifications,
+    u.status
+FROM 
+    users u
+JOIN 
+    instructors i ON u.id = i.user_id
+WHERE 
+    u.email IN ('carlos@gmail.com', 'maria@gmail.com', 'roberto@gmail.com');
+    
+ALTER TABLE students ADD COLUMN avatar VARCHAR(255) NULL;
+
 
 -- =============================================
 -- ADIÇÃO DE EXERCÍCIOS
@@ -366,93 +463,57 @@ INSERT INTO workout_items (workout_id, exercise_id, sets, repetitions, weight, r
 (@treino_full_id, @flexao_id, 3, '15', 0, 60, 2, 'Manter o corpo alinhado'),
 (@treino_full_id, @burpee_id, 3, '10', 0, 60, 3, 'Manter o ritmo constante');
 
--- Script para adicionar instrutores ao banco de dados
--- Senha padrão: Senha123@ (já com hash)
 
--- Inserir usuários dos instrutores
-INSERT INTO users (name, email, password_hash, cpf, phone, user_type, status) VALUES
--- Carlos Silva
-(
-    'Carlos Silva',
-    'carlos@gmail.com',
-    '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', -- Senha123@
-    '123.456.789-00',
-    '(11) 98765-4321',
-    'instructor',
-    'active'
-),
--- Maria Santos
-(
-    'Maria Santos',
-    'maria@gmail.com',
-    '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', -- Senha123@
-    '987.654.321-00',
-    '(11) 91234-5678',
-    'instructor',
-    'active'
-),
--- Roberto Lima
-(
-    'Roberto Lima',
-    'roberto@gmail.com',
-    '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', -- Senha123@
-    '456.789.123-00',
-    '(11) 99876-5432',
-    'instructor',
-    'active'
-);
 
--- Inserir os dados específicos dos instrutores
--- OBS: Substitua os IDs pelos IDs reais gerados na inserção anterior
-INSERT INTO instructors (user_id, specialty, hire_date, salary, certifications)
-SELECT 
-    id,
-    CASE 
-        WHEN email = 'carlos@gmail.com' THEN 'Musculação e Hipertrofia'
-        WHEN email = 'maria@gmail.com' THEN 'Crossfit e Condicionamento'
-        WHEN email = 'roberto@gmail.com' THEN 'Treinamento Funcional'
-    END as specialty,
-    CASE 
-        WHEN email = 'carlos@gmail.com' THEN '2023-01-15'
-        WHEN email = 'maria@gmail.com' THEN '2023-02-20'
-        WHEN email = 'roberto@gmail.com' THEN '2023-03-10'
-    END as hire_date,
-    CASE 
-        WHEN email = 'carlos@gmail.com' THEN 3500.00
-        WHEN email = 'maria@gmail.com' THEN 3800.00
-        WHEN email = 'roberto@gmail.com' THEN 3200.00
-    END as salary,
-    CASE 
-        WHEN email = 'carlos@gmail.com' THEN 'CREF 123456, Personal Trainer'
-        WHEN email = 'maria@gmail.com' THEN 'CREF 789012, CrossFit Level 2'
-        WHEN email = 'roberto@gmail.com' THEN 'CREF 345678, TRX Certification'
-    END as certifications
-FROM users 
-WHERE email IN ('carlos@gmail.com', 'maria@gmail.com', 'roberto@gmail.com')
-AND user_type = 'instructor';
+	USE gym_management;
+	DESCRIBE notifications;
 
--- Atualizar a data de criação para refletir a data de contratação
-UPDATE users u
-JOIN instructors i ON u.id = i.user_id
-SET u.created_at = i.hire_date
-WHERE u.email IN ('carlos@gmail.com', 'maria@gmail.com', 'roberto@gmail.com');
+DESCRIBE notifications;
 
--- Verificar os dados inseridos
-SELECT 
-    u.id,
-    u.name,
-    u.email,
-    u.phone,
-    i.specialty,
-    i.hire_date,
-    i.salary,
-    i.certifications,
-    u.status
-FROM 
-    users u
-JOIN 
-    instructors i ON u.id = i.user_id
-WHERE 
-    u.email IN ('carlos@gmail.com', 'maria@gmail.com', 'roberto@gmail.com');
-    
-ALTER TABLE students ADD COLUMN avatar VARCHAR(255) NULL;
+-- 1. Remover a chave estrangeira existente se existir
+ALTER TABLE notifications DROP FOREIGN KEY IF EXISTS notifications_ibfk_1;
+
+-- 2. Remover o índice existente
+DROP INDEX IF EXISTS idx_notification_user ON notifications;
+
+-- 3. Renomear a coluna is_read para read
+ALTER TABLE notifications CHANGE is_read `read` TINYINT(1) NOT NULL DEFAULT 0;
+
+-- 4. Atualizar o tipo da coluna type
+ALTER TABLE notifications 
+MODIFY COLUMN type ENUM('payment', 'system', 'alert') NOT NULL DEFAULT 'system';
+
+-- 5. Atualizar o tamanho da coluna title
+ALTER TABLE notifications 
+MODIFY COLUMN title VARCHAR(255) NOT NULL;
+
+-- 6. Adicionar a coluna updated_at se não existir
+ALTER TABLE notifications 
+ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP;
+
+-- 7. Recriar o índice
+CREATE INDEX idx_notification_user ON notifications(user_id, `read`);
+
+-- 8. Recriar a chave estrangeira
+ALTER TABLE notifications 
+ADD CONSTRAINT fk_notification_user 
+FOREIGN KEY (user_id) REFERENCES users(id) 
+ON DELETE CASCADE;
+
+CREATE TABLE IF NOT EXISTS `gym_settings` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `name` varchar(100) NOT NULL,
+  `email` varchar(100) NOT NULL,
+  `phone` varchar(20) DEFAULT NULL,
+  `address` text,
+  `email_notifications` tinyint(1) NOT NULL DEFAULT '1',
+  `sms_notifications` tinyint(1) NOT NULL DEFAULT '0',
+  `push_notifications` tinyint(1) NOT NULL DEFAULT '1',
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- Inserir configurações padrão
+INSERT INTO `gym_settings` (`name`, `email`, `phone`, `address`, `email_notifications`, `sms_notifications`, `push_notifications`)
+VALUES ('GymTech Pro', 'contato@exemplo.com', NULL, NULL, 1, 0, 1);

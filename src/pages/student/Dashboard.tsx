@@ -1,12 +1,43 @@
 import { useEffect, useState } from 'react';
-import StudentLayout from '@/components/StudentLayout';
 import { useAuth } from '@/context/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { studentAPI } from '@/services/api';
+import { fileService } from '@/services/fileService';
+import { AvatarUpload } from '@/components/ui/avatar-upload';
+import { toast } from '@/components/ui/use-toast';
 
 export default function StudentDashboard() {
   const { user } = useAuth();
   const [profile, setProfile] = useState<any | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+
+  const handleAvatarUpload = async (file: File) => {
+    try {
+      setIsUploading(true);
+      // Upload the file
+      const { url } = await fileService.uploadFile(file, 'avatars');
+      
+      // Update student profile with new avatar URL
+      if (profile?.id) {
+        const updatedStudent = await studentAPI.update(profile.id, { ...profile, avatar: url });
+        setProfile(updatedStudent);
+        
+        toast({
+          title: 'Sucesso!',
+          description: 'Foto de perfil atualizada com sucesso',
+        });
+      }
+    } catch (error) {
+      console.error('Error updating avatar:', error);
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível atualizar a foto de perfil',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   useEffect(() => {
     const load = async () => {
@@ -22,11 +53,24 @@ export default function StudentDashboard() {
   }, [user?.email]);
 
   return (
-    <StudentLayout>
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold text-gradient">Meu Perfil</h1>
-          <p className="text-muted-foreground">Informações da sua conta</p>
+    <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-gradient">Meu Perfil</h1>
+            <p className="text-muted-foreground">Informações da sua conta</p>
+          </div>
+          <div className="relative group">
+            <AvatarUpload 
+              currentAvatar={profile?.avatar ? fileService.getFileUrl(profile.avatar) : ''}
+              onUpload={handleAvatarUpload}
+              className="w-20 h-20"
+            />
+            {isUploading && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full">
+                <div className="h-6 w-6 animate-spin rounded-full border-2 border-white border-t-transparent" />
+              </div>
+            )}
+          </div>
         </div>
 
         <Card className="border-primary/20">
@@ -57,7 +101,6 @@ export default function StudentDashboard() {
             </div>
           </CardContent>
         </Card>
-      </div>
-    </StudentLayout>
+    </div>
   );
 }

@@ -1,6 +1,8 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToOne } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToOne, OneToMany } from 'typeorm';
 import { Student } from './Student';
 import { Instructor } from './Instructor';
+import { Notification } from './Notification';
+import { Treino } from './Treino';
 
 export type UserRole = 'admin' | 'instructor' | 'student';
 
@@ -50,4 +52,13 @@ export class User {
 
   @OneToOne(() => Instructor, (instructor) => instructor.user)
   instructor?: Instructor;
+
+  @OneToMany(() => Notification, (notification) => notification.user)
+  notifications!: Notification[];
+
+  @OneToMany(() => Treino, (treino) => treino.aluno)
+  treinosAluno!: Treino[];
+
+  @OneToMany(() => Treino, (treino) => treino.instrutor)
+  treinosInstrutor!: Treino[];
 }

@@ -1,8 +1,7 @@
 import 'reflect-metadata';
 import { DataSource } from 'typeorm';
 import dotenv from 'dotenv';
-import { User } from './entities/User';
-import { Student } from './entities/Student';
+import * as entities from './entities';
 
 dotenv.config();
 
@@ -15,7 +14,7 @@ export const AppDataSource = new DataSource({
   database: process.env.DB_NAME,
   synchronize: true,
   logging: false,
-  entities: [User, Student],
+  entities: Object.values(entities).filter(entity => typeof entity === 'function'),
   migrations: ['src/migrations/*.ts'],
 });
 

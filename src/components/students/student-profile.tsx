@@ -15,12 +15,14 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { StudentPayments } from './StudentPayments';
+import { useAuth } from '@/context/AuthContext';
 
 interface StudentProfileProps {
   student: Student | null;
+  isAdmin?: boolean;
 }
 
-export function StudentProfile({ student }: StudentProfileProps) {
+export function StudentProfile({ student, isAdmin = false }: StudentProfileProps) {
   const [currentStudent, setCurrentStudent] = useState<Student | null>(student);
   const [isUpdating, setIsUpdating] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -216,16 +218,34 @@ export function StudentProfile({ student }: StudentProfileProps) {
             <CardHeader className="border-b">
               <div className="flex justify-between items-start">
                 <div className="flex flex-col sm:flex-row items-center gap-6">
-                  <div className="relative group">
-                    <AvatarUpload 
-                      currentAvatar={currentStudent.avatar ? fileService.getFileUrl(currentStudent.avatar) : ''}
-                      onUpload={handleAvatarUpload}
-                      className="w-24 h-24"
-                    />
-                    {isUpdating && (
-                      <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full">
-                        <Loader2 className="h-8 w-8 animate-spin text-white" />
+                  <div className="relative">
+                    {isAdmin ? (
+                      // Avatar view-only para admin
+                      <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-gray-200 dark:border-gray-700">
+                        <img
+                          src={currentStudent.avatar ? fileService.getFileUrl(currentStudent.avatar) : '/images/avatars/default-avatar.png'}
+                          alt={currentStudent.name || 'Aluno'}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.src = '/images/avatars/default-avatar.png';
+                          }}
+                        />
                       </div>
+                    ) : (
+                      // Avatar com upload para o próprio aluno
+                      <>
+                        <AvatarUpload 
+                          currentAvatar={currentStudent.avatar ? fileService.getFileUrl(currentStudent.avatar) : ''}
+                          onUpload={handleAvatarUpload}
+                          className="w-16 h-16"
+                        />
+                        {isUpdating && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full">
+                            <Loader2 className="h-6 w-6 animate-spin text-white" />
+                          </div>
+                        )}
+                      </>
                     )}
                   </div>
                   <div className="text-center sm:text-left">

@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import StudentLayout from '@/components/StudentLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { instructorAPI } from '@/services/api';
 import { Users } from 'lucide-react';
@@ -32,8 +31,7 @@ export default function StudentTrainers() {
   }, []);
 
   return (
-    <StudentLayout>
-      <div className="space-y-6">
+    <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold text-gradient">Treinadores</h1>
           <p className="text-muted-foreground">Lista de treinadores da academia</p>
@@ -71,7 +69,6 @@ export default function StudentTrainers() {
             ))}
           </div>
         )}
-      </div>
-    </StudentLayout>
+    </div>
   );
 }
