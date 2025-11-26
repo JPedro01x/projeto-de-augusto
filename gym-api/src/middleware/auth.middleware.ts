@@ -5,17 +5,20 @@ import { User, UserRole } from '../entities/User';
 
 // Definir a interface para o payload do JWT
 interface JwtPayload {
-  user: {
-    id: number;
-    userType: UserRole;
-  };
+  userId: number;
+  userType: UserRole;
+  instructorId?: number;
 }
 
 // Extender a interface Request do Express para incluir a propriedade user
 declare global {
   namespace Express {
     interface Request {
-      user?: User; // Usar o tipo User completo
+      user?: {
+        id: number;
+        userType: UserRole;
+        instructorId?: number;
+      };
     }
   }
 }
@@ -35,14 +38,21 @@ export const authenticateToken = async (req: Request, res: Response, next: NextF
     
     // Verificar se o usuário existe no banco de dados
     const userRepository = AppDataSource.getRepository(User);
-    const user = await userRepository.findOne({ where: { id: decoded.user.id } });
+    const user = await userRepository.findOne({ 
+      where: { id: decoded.userId },
+      select: ['id', 'name', 'email', 'userType', 'status', 'createdAt', 'updatedAt']
+    });
 
     if (!user) {
       return res.status(401).json({ message: 'Usuário não encontrado' });
     }
 
-    // Adicionar o usuário completo à requisição para uso posterior
-    req.user = user;
+    // Adicionar o usuário à requisição para uso posterior
+    req.user = {
+      id: user.id,
+      userType: user.userType,
+      instructorId: decoded.instructorId
+    };
 
     next();
   } catch (error) {
@@ -51,6 +61,22 @@ export const authenticateToken = async (req: Request, res: Response, next: NextF
   }
 };
 
+// Middleware para autorização baseada em funções
+export const authMiddleware = (roles: UserRole[]) => {
+  return (req: Request, res: Response, next: NextFunction) => {
+    if (!req.user) {
+      return res.status(401).json({ message: 'Não autorizado' });
+    }
+
+    if (!roles.includes(req.user.userType)) {
+      return res.status(403).json({ 
+        message: 'Acesso negado. Permissões insuficientes.' 
+      });
+    }
+
+    next();
+  };
+};
 export const authorizeRoles = (roles: UserRole[]) => {
   return (req: Request, res: Response, next: NextFunction) => {
     if (!req.user) {
@@ -64,3 +90,4 @@ export const authorizeRoles = (roles: UserRole[]) => {
     next();
   };
 };
+ 

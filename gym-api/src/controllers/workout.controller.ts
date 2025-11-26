@@ -9,37 +9,34 @@ export const getStudentWorkouts = async (req: Request, res: Response) => {
   try {
     const { studentId } = req.params;
     
-    // Verifica se o aluno existe
-    const student = await AppDataSource.getRepository(Student).findOne({
-      where: { user: { id: parseInt(studentId) } },
-      relations: ['user']
-    });
-
-    if (!student) {
-      return res.status(404).json({ message: 'Aluno não encontrado' });
-    }
-
-    // Busca os treinos do aluno
+    console.log('Buscando treinos para studentId:', studentId);
+    
+    // Busca os treinos do aluno diretamente pela student_id na tabela workout_plans
     const workoutPlanRepository = AppDataSource.getRepository(WorkoutPlan);
     const workouts = await workoutPlanRepository.find({
-      where: { student: { user: { id: parseInt(studentId) } } },
-      relations: ['instructor', 'instructor.user'],
+      where: { studentId: parseInt(studentId) },
+      relations: ['instructor', 'instructor.user', 'student', 'student.user'],
       order: { startDate: 'DESC' }
     });
+
+    console.log('Treinos encontrados:', workouts.length);
 
     // Formata a resposta
     const formattedWorkouts = workouts.map(workout => ({
       id: workout.id,
+      studentId: workout.studentId,
+      instructorId: workout.instructorId,
+      name: workout.title,
       title: workout.title,
-      description: workout.description,
+      description: workout.description || '',
       status: workout.status,
       startDate: workout.startDate,
       endDate: workout.endDate,
-      exercises: workout.exercises,
-      instructor: {
+      exercises: workout.exercises || [],
+      instructor: workout.instructor ? {
         id: workout.instructor.user.id,
         name: workout.instructor.user.name
-      },
+      } : null,
       createdAt: workout.createdAt,
       updatedAt: workout.updatedAt
     }));

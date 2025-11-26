@@ -46,56 +46,81 @@ export const createStudent = async (req: Request, res: Response) => {
   }
 };
 
-export const listStudents = async (_req: Request, res: Response) => {
+export const listStudents = async (req: Request, res: Response) => {
   try {
-    const studentRepo = AppDataSource.getRepository(Student);
-    // Primeiro, buscamos os alunos sem selecionar colunas específicas para evitar erros
-    const students = await studentRepo.find({ 
-      relations: { 
-        user: true,
-        instructor: { user: true }
-      }
-    });
+    const { instructorId } = req.query;
+    
+    let query = `
+      SELECT DISTINCT
+        u.id,
+        u.name,
+        u.email,
+        u.cpf,
+        u.phone,
+        u.birth_date as birthDate,
+        u.address,
+        u.gender,
+        u.status,
+        s.plan_type as planType,
+        s.start_date as startDate,
+        s.end_date as endDate,
+        s.emergency_contact_name as emergencyContact,
+        s.emergency_contact_phone as emergencyContactPhone,
+        s.health_conditions as medicalConditions,
+        s.registration_date as registrationDate,
+        s.created_at as createdAt,
+        s.updated_at as updatedAt,
+        s.payment_status as paymentStatus,
+        s.last_payment_date as lastPaymentDate,
+        s.next_payment_date as nextPaymentDate,
+        s.avatar
+      FROM users u
+      JOIN students s ON u.id = s.user_id
+      LEFT JOIN student_instructors si ON s.user_id = si.student_id
+    `;
 
-    // Mapear os dados para o formato esperado pelo frontend
-    const formattedStudents = students
-      .map(student => {
-        if (!student.user) {
-          console.error('User not found for student:', student.userId);
-          return null;
-        }
+    const params: any[] = [];
 
-        // Garantir que todos os campos necessários estejam presentes
-        return {
-          id: student.user.id.toString(),
-          userId: student.user.id,
-          name: student.user.name || 'Não informado',
-          email: student.user.email || 'Não informado',
-          cpf: student.user.cpf || 'Não informado',
-          phone: student.user.phone || 'Não informado',
-          birthDate: student.user.birthDate || null,
-          address: student.user.address || 'Não informado',
-          gender: student.gender || student.user.gender || 'not_specified',
-          status: student.user.status || 'inactive',
-          planType: student.planType || 'basic',
-          startDate: student.startDate || null,
-          endDate: student.endDate || null,
-          emergencyContact: student.emergencyContactName || 'Não informado',
-          emergencyContactPhone: student.emergencyContactPhone || 'Não informado',
-          medicalConditions: student.healthConditions || 'Nenhuma condição médica informada',
-          registrationDate: student.registrationDate || student.createdAt?.toISOString() || new Date().toISOString(),
-          paymentStatus: student.paymentStatus || 'pending',
-          lastPaymentDate: student.lastPaymentDate?.toISOString() || null,
-          nextPaymentDate: student.nextPaymentDate?.toISOString() || null,
-          avatar: student.avatar || '/images/avatars/default-avatar.png',
-          assignedInstructor: student.instructor ? student.instructor.userId.toString() : '',
-          instructorName: student.instructor?.user?.name || 'Não atribuído',
-          updatedAt: student.updatedAt?.toISOString() || new Date().toISOString(),
-          age: student.user.birthDate ? 
-            (new Date().getFullYear() - new Date(student.user.birthDate).getFullYear()) : null
-        };
-      })
-      .filter((student): student is NonNullable<typeof student> => student !== null);
+    if (instructorId) {
+      query += ` WHERE si.instructor_id = ?`;
+      params.push(Number(instructorId));
+    } else {
+      query += ` WHERE u.user_type = 'student'`;
+    }
+
+    query += ` ORDER BY u.name ASC`;
+
+    const students = await AppDataSource.query(query, params);
+
+    // Format students response
+    const formattedStudents = students.map((s: any) => ({
+      id: s.id.toString(),
+      userId: s.id,
+      name: s.name || 'Não informado',
+      email: s.email || 'Não informado',
+      cpf: s.cpf || 'Não informado',
+      phone: s.phone || 'Não informado',
+      birthDate: s.birthDate || null,
+      address: s.address || 'Não informado',
+      gender: s.gender || 'not_specified',
+      status: s.status || 'inactive',
+      planType: s.planType || 'basic',
+      startDate: s.startDate || null,
+      endDate: s.endDate || null,
+      emergencyContact: s.emergencyContact || 'Não informado',
+      emergencyContactPhone: s.emergencyContactPhone || 'Não informado',
+      medicalConditions: s.medicalConditions || 'Nenhuma condição médica informada',
+      registrationDate: s.registrationDate?.toISOString?.() || new Date().toISOString(),
+      paymentStatus: s.paymentStatus || 'pending',
+      lastPaymentDate: s.lastPaymentDate?.toISOString?.() || null,
+      nextPaymentDate: s.nextPaymentDate?.toISOString?.() || null,
+      avatar: s.avatar || '/images/avatars/default-avatar.png',
+      assignedInstructor: '',
+      instructorName: 'Não atribuído',
+      updatedAt: s.updatedAt?.toISOString?.() || new Date().toISOString(),
+      age: s.birthDate ? 
+        (new Date().getFullYear() - new Date(s.birthDate).getFullYear()) : null
+    }));
 
     return res.json(formattedStudents);
   } catch (error: unknown) {
@@ -105,6 +130,36 @@ export const listStudents = async (_req: Request, res: Response) => {
       message: 'Erro ao listar alunos',
       error: errorMessage,
       stack: process.env.NODE_ENV === 'development' ? (error as Error).stack : undefined
+    });
+  }
+};
+
+export const debugStudentsWithInstructors = async (_req: Request, res: Response) => {
+  try {
+    const query = AppDataSource.createQueryBuilder()
+      .select('u.id', 'student_id')
+      .addSelect('u.name', 'student_name')
+      .addSelect('u.email', 'student_email')
+      .addSelect('s.instructor_id', 'instructor_id')
+      .addSelect('ui.name', 'instructor_name')
+      .from(User, 'u')
+      .leftJoin(Student, 's', 's.user_id = u.id')
+      .leftJoin(User, 'ui', 'ui.id = s.instructor_id')
+      .where('u.user_type = :type', { type: 'student' })
+      .orderBy('u.name', 'ASC');
+
+    const results = await query.getRawMany();
+    
+    return res.json({
+      total: results.length,
+      students: results
+    });
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+    console.error('Erro ao debugar alunos:', error);
+    return res.status(500).json({ 
+      message: 'Erro ao debugar alunos',
+      error: errorMessage
     });
   }
 };

@@ -48,12 +48,17 @@ export interface Instructor {
   name: string;
   email: string;
   cpf: string;
-  phone: string;
-  birthDate: string;
-  address: string;
-  status: 'active' | 'inactive';
-  specialties: string[];
-  schedule: {
+  phone?: string;
+  specialization?: string;
+  bio?: string;
+  photoUrl?: string;
+  emergencyContact?: string;
+  emergencyContactPhone?: string;
+  hireDate: string;
+  createdAt?: string;
+  updatedAt?: string;
+  notes?: string;
+  schedule?: {
     [key: string]: { // dia da semana
       start: string;
       end: string;
@@ -61,7 +66,6 @@ export interface Instructor {
   };
   assignedStudents: string[];
   salary: number;
-  hireDate: string;
   certifications: string[];
 }
 
@@ -71,10 +75,13 @@ export interface WorkoutPlan {
   instructorId: string;
   name: string;
   description: string;
+  difficulty?: 'beginner' | 'intermediate' | 'advanced';
   startDate: string;
   endDate: string;
   exercises: Exercise[];
   status: 'active' | 'completed' | 'cancelled';
+  createdAt: string;
+  updatedAt?: string;
 }
 
 export interface Exercise {

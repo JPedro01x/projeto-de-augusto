@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { AppDataSource } from '../config/database';
 import { User } from '../entities/User';
 import { Instructor } from '../entities/Instructor';
+import { Student } from '../entities/Student';
 import { MoreThanOrEqual } from 'typeorm';
 import bcrypt from 'bcrypt';
 
@@ -12,10 +13,15 @@ export const listInstructors = async (_req: Request, res: Response) => {
       where: { userType: 'instructor', status: 'active' },
       relations: ['instructor']
     });
-    
-    // Retorna apenas campos necessários ao frontend
-    return res.json(
-      instructors.map((u) => ({
+
+    const result = await Promise.all(instructors.map(async (u) => {
+      // Get student count from junction table
+      const activeStudents = await AppDataSource.query(
+        'SELECT COUNT(*) as count FROM student_instructors WHERE instructor_id = ?',
+        [u.id]
+      );
+      
+      return {
         id: u.id,
         name: u.name,
         email: u.email,
@@ -23,13 +29,53 @@ export const listInstructors = async (_req: Request, res: Response) => {
         cpf: u.cpf,
         specialty: u.instructor?.specialty,
         certifications: u.instructor?.certifications,
-        schedule: 'Seg a Sex: 08:00 - 18:00', // Valor padrão, ajuste conforme necessário
-        activeStudents: 0 // Será calculado posteriormente
-      }))
-    );
+        hireDate: u.instructor?.hireDate,
+        photoUrl: u.instructor?.photoUrl,
+        bio: u.instructor?.bio,
+        salary: u.instructor?.salary,
+        schedule: (u.instructor as any)?.schedule || null,
+        activeStudents: activeStudents[0]?.count || 0
+      };
+    }));
+
+    return res.json(result);
   } catch (error) {
     console.error('Erro ao listar instrutores:', error);
     return res.status(500).json({ message: 'Erro ao listar instrutores' });
+  }
+};
+
+export const getInstructorById = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const userRepo = AppDataSource.getRepository(User);
+    const instructorUser = await userRepo.findOne({ where: { id: Number(id), userType: 'instructor' }, relations: ['instructor'] });
+    if (!instructorUser) return res.status(404).json({ message: 'Instrutor não encontrado' });
+
+    // Get student count from junction table
+    const activeStudents = await AppDataSource.query(
+      'SELECT COUNT(*) as count FROM student_instructors WHERE instructor_id = ?',
+      [instructorUser.id]
+    );
+
+    return res.json({
+      id: instructorUser.id,
+      name: instructorUser.name,
+      email: instructorUser.email,
+      phone: instructorUser.phone,
+      cpf: instructorUser.cpf,
+      specialty: instructorUser.instructor?.specialty,
+      certifications: instructorUser.instructor?.certifications,
+      hireDate: instructorUser.instructor?.hireDate,
+      photoUrl: instructorUser.instructor?.photoUrl,
+      bio: instructorUser.instructor?.bio,
+      salary: instructorUser.instructor?.salary,
+      schedule: (instructorUser.instructor as any)?.schedule || null,
+      activeStudents: activeStudents[0]?.count || 0
+    });
+  } catch (error) {
+    console.error('Erro ao buscar instrutor:', error);
+    return res.status(500).json({ message: 'Erro ao buscar instrutor' });
   }
 };
 

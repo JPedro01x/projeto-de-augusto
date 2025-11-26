@@ -234,10 +234,32 @@ export const studentAPI = {
   // Buscar alunos por instrutor
   getByInstructor: async (instructorId: string): Promise<Student[]> => {
     try {
-      // Se o backend suportar filtro por instrutor, podemos fazer a requisição diretamente
-      // Caso contrário, filtramos localmente
-      const allStudents = await studentAPI.list();
-      return allStudents.filter(student => student.assignedInstructor === instructorId);
+      const data = await apiRequest<any[]>(`/students?instructorId=${instructorId}`);
+      return data.map((s: any) => ({
+        id: String(s.id),
+        name: s.name,
+        email: s.email,
+        cpf: s.cpf,
+        phone: s.phone,
+        birthDate: s.birthDate,
+        address: s.address || '',
+        status: s.status || 'active',
+        planType: s.planType || 'basic',
+        startDate: s.startDate || '',
+        endDate: s.endDate || '',
+        emergencyContact: s.emergencyContact || '',
+        paymentStatus: s.paymentStatus || 'pending',
+        assignedInstructor: '',
+        medicalConditions: s.medicalConditions || '',
+        gender: s.gender || 'not_specified',
+        avatar: s.avatar || '/images/avatars/default-avatar.png',
+        registrationDate: s.registrationDate || new Date().toISOString(),
+        lastPaymentDate: s.lastPaymentDate || null,
+        nextPaymentDate: s.nextPaymentDate || null,
+        age: s.age || null,
+        updatedAt: s.updatedAt || new Date().toISOString(),
+        instructorName: s.instructorName || 'Não atribuído'
+      }));
     } catch (error) {
       console.error(`Erro ao buscar alunos do instrutor ${instructorId}:`, error);
       return [];
@@ -496,6 +518,29 @@ export const dashboardAPI = {
     } catch (error) {
       console.error('Erro ao buscar métricas de alunos:', error);
       throw error;
+    }
+  }
+};
+
+// API de Treinos
+export const workoutAPI = {
+  // Obter treinos de um aluno específico
+  getStudentWorkouts: async (studentId: string): Promise<WorkoutPlan[]> => {
+    try {
+      return await apiRequest<WorkoutPlan[]>(`/students/${studentId}/workouts`);
+    } catch (error) {
+      console.error(`Erro ao buscar treinos do aluno ${studentId}:`, error);
+      return [];
+    }
+  },
+
+  // Obter um treino por ID
+  getWorkoutById: async (id: string): Promise<WorkoutPlan | null> => {
+    try {
+      return await apiRequest<WorkoutPlan>(`/workouts/${id}`);
+    } catch (error) {
+      console.error(`Erro ao buscar treino ${id}:`, error);
+      return null;
     }
   }
 };

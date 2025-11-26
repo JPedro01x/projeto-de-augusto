@@ -1,21 +1,46 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Search, User, Phone, Mail, Calendar, Dumbbell, CheckCircle, XCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { useStudents } from '@/hooks/use-students';
+import { useAuth } from '@/context/AuthContext';
 import { Student } from '@/types';
+import { studentAPI } from '@/services/api';
 
 export default function InstructorStudents() {
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
-  const { students = [], isLoading } = useStudents();
+  const [students, setStudents] = useState<Student[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const { user } = useAuth();
 
-  // Filtrar alunos atribuídos a este instrutor
+  // Fetch students for this instructor
+  useEffect(() => {
+    if (!user?.id) return;
+    
+    const fetchStudents = async () => {
+      try {
+        setIsLoading(true);
+        const data = await studentAPI.getByInstructor(user.id);
+        setStudents(data || []);
+      } catch (error) {
+        console.error('Error fetching students:', error);
+        toast({
+          title: 'Erro',
+          description: 'Não foi possível carregar os alunos.',
+          variant: 'destructive',
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchStudents();
+  }, [user?.id, toast]);
+
   const filteredStudents = students.filter(student => 
-    student.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
-    student.assignedInstructor === 'instructor-1' // Substituir pelo ID do instrutor logado
+    student.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const handleViewWorkouts = (studentId: string) => {

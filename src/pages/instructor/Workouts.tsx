@@ -1,48 +1,76 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Search, Plus, Dumbbell, User, Calendar, Clock, BarChart2, CalendarDays, CheckCircle, XCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { useStudents } from '@/hooks/use-students';
 import { Student, WorkoutPlan, Exercise } from '@/types';
+import { useAuth } from '@/context/AuthContext';
+import { workoutAPI, studentAPI } from '@/services/api';
+
 
 export default function InstructorWorkouts() {
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
-  const { students = [], isLoading } = useStudents();
+  const [students, setStudents] = useState<Student[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Dados de exemplo - substituir por chamadas à API real
-  const workoutPlans: WorkoutPlan[] = [
-    {
-      id: '1',
-      studentId: '1',
-      instructorId: 'instructor-1',
-      name: 'Treino A - Peito e Tríceps',
-      description: 'Treino focado em peitoral e tríceps',
-      startDate: '2023-10-01',
-      endDate: '2023-10-31',
-      status: 'active',
-      exercises: [
-        { id: '1', name: 'Supino Reto', sets: 4, reps: 10, weight: 50 },
-        { id: '2', name: 'Supino Inclinado', sets: 3, reps: 12, weight: 40 },
-        { id: '3', name: 'Tríceps Corda', sets: 3, reps: 15, weight: 25 },
-      ]
-    },
-    // Adicione mais treinos de exemplo conforme necessário
-  ];
+  const [workoutPlans, setWorkoutPlans] = useState<WorkoutPlan[]>([]);
+  const [loadingWorkouts, setLoadingWorkouts] = useState(false);
 
-  // Filtrar alunos atribuídos a este instrutor
+  const { user } = useAuth();
+  const instructorId = user?.id || '';
+
+  // Buscar alunos do instrutor via API
+  useEffect(() => {
+    const fetchStudents = async () => {
+      setIsLoading(true);
+      try {
+        const data = await studentAPI.getByInstructor(instructorId);
+        setStudents(data || []);
+      } catch (error) {
+        console.error('Erro ao buscar alunos:', error);
+        setStudents([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (instructorId) {
+      fetchStudents();
+    }
+  }, [instructorId]);
+
+  // Filtrar alunos por termo de busca
   const filteredStudents = students.filter(student => 
-    student.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
-    student.assignedInstructor === 'instructor-1' // Substituir pelo ID do instrutor logado
+    student.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  useEffect(() => {
+    // Quando selecionar um aluno, buscar treinos reais via API
+    const fetchWorkouts = async () => {
+      if (!selectedStudent) {
+        setWorkoutPlans([]);
+        return;
+      }
+      setLoadingWorkouts(true);
+      try {
+        const data = await workoutAPI.getStudentWorkouts(selectedStudent.id);
+        setWorkoutPlans(data || []);
+      } catch (error) {
+        console.error('Erro ao buscar treinos do aluno:', error);
+        setWorkoutPlans([]);
+      } finally {
+        setLoadingWorkouts(false);
+      }
+    };
+
+    fetchWorkouts();
+  }, [selectedStudent]);
+
   // Filtrar treinos do aluno selecionado
-  const studentWorkouts = selectedStudent 
-    ? workoutPlans.filter(workout => workout.studentId === selectedStudent.id)
-    : [];
+  const studentWorkouts = selectedStudent ? workoutPlans : [];
 
   const handleSelectStudent = (student: Student) => {
     setSelectedStudent(student);
@@ -170,19 +198,23 @@ export default function InstructorWorkouts() {
             </Button>
           </div>
 
-          {studentWorkouts.length > 0 ? (
+          {loadingWorkouts ? (
+            <div className="flex items-center justify-center h-32">
+              <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+            </div>
+          ) : studentWorkouts.length > 0 ? (
             <div className="grid gap-4">
               {studentWorkouts.map((workout) => (
                 <Card key={workout.id} className="overflow-hidden">
                   <div className="p-6">
                     <div className="flex justify-between items-start">
                       <div>
-                        <h3 className="text-lg font-semibold">{workout.name}</h3>
-                        <p className="text-sm text-muted-foreground">{workout.description}</p>
+                        <h3 className="text-lg font-semibold">{workout.title || workout.name || 'Treino sem nome'}</h3>
+                        <p className="text-sm text-muted-foreground">{workout.description || 'Sem descrição'}</p>
                         <div className="flex items-center mt-2 text-sm text-muted-foreground">
                           <CalendarDays className="h-4 w-4 mr-2" />
                           <span>
-                            {new Date(workout.startDate).toLocaleDateString()} - {new Date(workout.endDate).toLocaleDateString()}
+                            {new Date(workout.startDate).toLocaleDateString('pt-BR')} - {new Date(workout.endDate).toLocaleDateString('pt-BR')}
                           </span>
                           <span className="mx-2">•</span>
                           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
@@ -212,25 +244,29 @@ export default function InstructorWorkouts() {
                     <div className="mt-6">
                       <h4 className="text-sm font-medium mb-3">Exercícios</h4>
                       <div className="space-y-3">
-                        {workout.exercises.map((exercise) => (
-                          <div key={exercise.id} className="bg-muted/50 p-3 rounded-lg">
-                            <div className="flex justify-between items-center">
-                              <div>
-                                <h5 className="font-medium">{exercise.name}</h5>
-                                <div className="flex items-center text-sm text-muted-foreground mt-1">
-                                  <span className="mr-4">{exercise.sets} séries</span>
-                                  <span className="mr-4">{exercise.reps} repetições</span>
-                                  {exercise.weight && (
-                                    <span className="mr-4">{exercise.weight} kg</span>
-                                  )}
+                        {Array.isArray(workout.exercises) && workout.exercises.length > 0 ? (
+                          workout.exercises.map((exercise: any) => (
+                            <div key={exercise.id || Math.random()} className="bg-muted/50 p-3 rounded-lg">
+                              <div className="flex justify-between items-center">
+                                <div>
+                                  <h5 className="font-medium">{exercise.name || 'Exercício'}</h5>
+                                  <div className="flex items-center text-sm text-muted-foreground mt-1">
+                                    <span className="mr-4">{exercise.sets || 0} séries</span>
+                                    <span className="mr-4">{exercise.reps || 0} repetições</span>
+                                    {exercise.weight && (
+                                      <span className="mr-4">{exercise.weight} kg</span>
+                                    )}
+                                  </div>
                                 </div>
+                                <Button variant="ghost" size="sm">
+                                  <BarChart2 className="h-4 w-4" />
+                                </Button>
                               </div>
-                              <Button variant="ghost" size="sm">
-                                <BarChart2 className="h-4 w-4" />
-                              </Button>
                             </div>
-                          </div>
-                        ))}
+                          ))
+                        ) : (
+                          <p className="text-sm text-muted-foreground">Nenhum exercício cadastrado</p>
+                        )}
                       </div>
                     </div>
                   </div>

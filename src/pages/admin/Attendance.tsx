@@ -13,7 +13,7 @@ const Attendance = () => {
   const [date, setDate] = useState<Date>(new Date());
   const [searchTerm, setSearchTerm] = useState('');
   const [students, setStudents] = useState<Student[]>([]);
-  const { stats, checkIn, removeAttendance } = useAttendance();
+  const { stats, checkIn, removeAttendance, attendances } = useAttendance();
   
   // Carrega a lista de alunos do localStorage
   useEffect(() => {
@@ -26,7 +26,12 @@ const Attendance = () => {
   const filteredStudents = students.filter(student =>
     student.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
     student.status === 'active'
-  );
+  ).map(student => ({
+    ...student,
+    lastAttendance: attendances
+      .filter(a => a.studentId === student.id)
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0]?.date
+  }));
 
   return (
     <div className="space-y-6">
@@ -46,9 +51,9 @@ const Attendance = () => {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-primary">
-              {stats.activeToday}
+              {students.filter(s => s.status === 'active').length}
             </div>
-            <p className="text-xs text-muted-foreground mt-1">alunos presentes hoje</p>
+            <p className="text-xs text-muted-foreground mt-1">alunos ativos no total</p>
           </CardContent>
         </Card>
 
@@ -60,8 +65,10 @@ const Attendance = () => {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-primary">{stats.totalToday}</div>
-            <p className="text-xs text-muted-foreground mt-1">registros hoje</p>
+            <div className="text-3xl font-bold text-primary">
+              {attendances.filter(a => new Date(a.date).toDateString() === new Date().toDateString()).length}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">presenças hoje</p>
           </CardContent>
         </Card>
 
@@ -74,7 +81,15 @@ const Attendance = () => {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-primary">
-              {Math.round(stats.weeklyStats['Segunda'].percentage)}%
+              {Math.round(
+                (attendances.filter(a => {
+                  const date = new Date(a.date);
+                  const today = new Date();
+                  const lastWeek = new Date();
+                  lastWeek.setDate(today.getDate() - 7);
+                  return date >= lastWeek;
+                }).length / (students.filter(s => s.status === 'active').length * 3)) * 100
+              ) || 0}%
             </div>
             <p className="text-xs text-muted-foreground mt-1">média semanal</p>
           </CardContent>
@@ -126,10 +141,14 @@ const Attendance = () => {
                         {student.name.charAt(0)}
                       </div>
                       <div>
-                        <p className="font-medium">{student.name}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {student.planType.charAt(0).toUpperCase() + student.planType.slice(1)}
-                        </p>
+                        <div className="flex flex-col">
+                          <span className="font-medium">{student.name}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {student.lastAttendance 
+                              ? `Última presença: ${new Date(student.lastAttendance).toLocaleDateString('pt-BR')}`
+                              : 'Nenhuma presença registrada'}
+                          </span>
+                        </div>
                       </div>
                     </div>
                     

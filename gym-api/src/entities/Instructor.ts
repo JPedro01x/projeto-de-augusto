@@ -15,6 +15,9 @@ export class Instructor {
   @Column({ length: 100, nullable: true })
   specialty?: string;
 
+  @Column({ length: 100, nullable: true })
+  specialization?: string;
+
   @Column({ name: 'hire_date', type: 'date' })
   hireDate!: Date;
 
@@ -23,6 +26,15 @@ export class Instructor {
 
   @Column({ type: 'text', nullable: true })
   certifications?: string;
+
+  @Column({ length: 20, nullable: true })
+  phone?: string;
+
+  @Column({ type: 'text', nullable: true })
+  bio?: string;
+
+  @Column({ name: 'photo_url', length: 255, nullable: true })
+  photoUrl?: string;
 
   // Relacionamento com alunos
   @OneToMany(() => Student, student => student.instructor)
