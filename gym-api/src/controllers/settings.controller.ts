@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { AppDataSource } from '../data-source';
+import AppDataSource from '../data-source';
 import { GymSettings } from '../entities/GymSettings';
 import { User } from '../entities/User';
 import bcrypt from 'bcrypt';
@@ -25,12 +25,12 @@ let settingsRepository: any;
 let userRepository: any;
 
 // Inicialização dos repositórios
-const initRepositories = getRepositories().then(repositories => {
+const initRepositories = getRepositories().then((repositories: any) => {
   settingsRepository = repositories.settingsRepository;
   userRepository = repositories.userRepository;
   console.log('Repositórios inicializados com sucesso');
   return repositories;
-}).catch(error => {
+}).catch((error: Error) => {
   console.error('Erro ao inicializar repositórios:', error);
   throw error;
 });

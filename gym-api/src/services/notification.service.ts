@@ -1,4 +1,4 @@
-import { AppDataSource } from '../config/database';
+import AppDataSource from '../data-source';
 import { Notification, NotificationType } from '../entities/Notification';
 import { User } from '../entities/User';
 import { Student } from '../entities/Student';
@@ -22,11 +22,10 @@ class NotificationService {
       }
       
       const notification = notificationRepository.create({
-        title,
         message,
         type,
         relatedId,
-        userId: userId.toString(),
+        userId: userId,
         read: false,
       });
       
@@ -43,7 +42,7 @@ class NotificationService {
   async getNotifications(userId: number) {
     const notificationRepository = AppDataSource.getRepository(Notification);
     return await notificationRepository.find({
-      where: { userId: userId.toString() },
+      where: { userId },
       order: { createdAt: 'DESC' },
       take: 50 // Limita a 50 notificações mais recentes
     });
@@ -65,8 +64,11 @@ class NotificationService {
   
   async markAllAsRead(userId: number) {
     const notificationRepository = AppDataSource.getRepository(Notification);
+    const unreadCount = await notificationRepository.count({
+      where: { userId, read: false }
+    });
     await notificationRepository.update(
-      { userId: userId.toString(), read: false },
+      { userId, read: false },
       { read: true }
     );
     

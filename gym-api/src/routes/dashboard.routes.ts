@@ -1,10 +1,14 @@
-import { Router } from 'express';
+﻿import { Router } from 'express';
 import { getDashboardStats } from '../controllers/dashboard.controller';
-import { authenticateToken } from '../middleware';
 
 const router = Router();
 
-// Rota para obter estatísticas do dashboard (protegida por autenticação)
-router.get('/stats', authenticateToken, getDashboardStats);
+// Rota para obter estatísticas do dashboard
+router.get('/stats', getDashboardStats);
 
-export default router;
+// Rota básica para verificar se o dashboard está funcionando
+router.get('/', (req, res) => {
+  return res.json({ message: 'Dashboard route is working!' });
+});
+
+export { router as dashboardRouter };
