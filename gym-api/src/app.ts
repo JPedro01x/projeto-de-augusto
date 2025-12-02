@@ -1,30 +1,25 @@
-import 'reflect-metadata';
-import express from 'express';
+﻿import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
-import { AppDataSource } from './config/database';
 import { router } from './routes';
-import { errorHandler } from './middleware/error.middleware';
+import { errorHandler } from './middleware/error-handler';
 
-dotenv.config();
+const app = express();
 
-export const app = express();
-
+// Middleware
 app.use(cors({
-  origin: 'http://localhost:5173', // Vite's default port
+  origin: 'http://localhost:5173',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
 }));
+
 app.use(express.json());
 
+// Rotas
 app.get('/health', (_req, res) => res.json({ status: 'ok' }));
 app.use('/api', router);
+
+// Middleware de tratamento de erros
 app.use(errorHandler);
 
-AppDataSource.initialize()
-  .then(() => console.log('Database connected'))
-  .catch((err) => {
-    console.error('Database connection error:', err);
-    process.exit(1);
-  });
+export { app };

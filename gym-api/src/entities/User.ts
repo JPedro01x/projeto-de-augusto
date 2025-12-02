@@ -1,64 +1,37 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToOne, OneToMany } from 'typeorm';
-import { Student } from './Student';
+﻿import { Entity, PrimaryGeneratedColumn, Column, OneToOne } from 'typeorm';
 import { Instructor } from './Instructor';
-import { Notification } from './Notification';
-import { Treino } from './Treino';
 
-export type UserRole = 'admin' | 'instructor' | 'student';
+export type UserRole = 'admin' | 'instructor' | 'student' | 'user';
 
-@Entity('users')
+@Entity()
 export class User {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @Column({ length: 100 })
-  name!: string;
+  @Column()
+  name: string = '';
 
-  @Column({ length: 100, unique: true })
-  email!: string;
+  @Column({ unique: true })
+  email: string = '';
 
-  @Column({ name: 'password_hash' })
-  passwordHash!: string;
+  @Column()
+  password: string = '';
 
-  @Column({ length: 14, nullable: true, unique: true })
+  @Column({ type: 'varchar', default: 'user' })
+  role: UserRole = 'user';
+
+  @Column({ default: true })
+  isActive: boolean = true;
+
+  @Column({ nullable: true })
   cpf?: string;
 
-  @Column({ length: 20, nullable: true })
+  @Column({ nullable: true })
   phone?: string;
 
-  @Column({ name: 'birth_date', type: 'date', nullable: true })
-  birthDate?: Date;
+  @Column({ name: 'created_at', type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
+  createdAt: Date = new Date();
 
-  @Column({ type: 'text', nullable: true })
-  address?: string;
-
-  @Column({ type: 'varchar', length: 20, nullable: true })
-  gender?: string;
-
-  @Column({ type: 'enum', enum: ['admin', 'instructor', 'student'], name: 'user_type' })
-  userType!: UserRole;
-
-  @Column({ type: 'enum', enum: ['active', 'inactive', 'suspended'], default: 'active' })
-  status!: 'active' | 'inactive' | 'suspended';
-
-  @CreateDateColumn({ name: 'created_at' })
-  createdAt!: Date;
-
-  @UpdateDateColumn({ name: 'updated_at' })
-  updatedAt!: Date;
-
-  @OneToOne(() => Student, (student) => student.user)
-  student?: Student;
-
-  @OneToOne(() => Instructor, (instructor) => instructor.user)
-  instructor?: Instructor;
-
-  @OneToMany(() => Notification, (notification) => notification.user)
-  notifications!: Notification[];
-
-  @OneToMany(() => Treino, (treino) => treino.aluno)
-  treinosAluno!: Treino[];
-
-  @OneToMany(() => Treino, (treino) => treino.instrutor)
-  treinosInstrutor!: Treino[];
+  @Column({ name: 'updated_at', type: 'timestamp', default: () => 'CURRENT_TIMESTAMP', onUpdate: 'CURRENT_TIMESTAMP' })
+  updatedAt: Date = new Date();
 }

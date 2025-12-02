@@ -1,39 +1,27 @@
 import { Request, Response } from 'express';
-import AppDataSource from '../data-source';
+import { AppDataSource } from '../data-source';
 import { GymSettings } from '../entities/GymSettings';
 import { User } from '../entities/User';
 import bcrypt from 'bcrypt';
 
 // Obter repositórios de forma segura
-const getRepositories = () => {
-  if (!AppDataSource.isInitialized) {
-    console.log('DataSource não inicializado, inicializando...');
-    return AppDataSource.initialize().then(() => ({
+const getRepositories = async () => {
+  try {
+    if (!AppDataSource.isInitialized) {
+      console.log('Inicializando conexão com o banco de dados...');
+      await AppDataSource.initialize();
+      console.log('Conexão com o banco de dados estabelecida com sucesso!');
+    }
+    
+    return {
       settingsRepository: AppDataSource.getRepository(GymSettings),
       userRepository: AppDataSource.getRepository(User)
-    }));
+    };
+  } catch (error) {
+    console.error('Erro ao inicializar o banco de dados:', error);
+    throw new Error('Falha ao conectar ao banco de dados');
   }
-  
-  return Promise.resolve({
-    settingsRepository: AppDataSource.getRepository(GymSettings),
-    userRepository: AppDataSource.getRepository(User)
-  });
 };
-
-// Inicializar os repositórios
-let settingsRepository: any;
-let userRepository: any;
-
-// Inicialização dos repositórios
-const initRepositories = getRepositories().then((repositories: any) => {
-  settingsRepository = repositories.settingsRepository;
-  userRepository = repositories.userRepository;
-  console.log('Repositórios inicializados com sucesso');
-  return repositories;
-}).catch((error: Error) => {
-  console.error('Erro ao inicializar repositórios:', error);
-  throw error;
-});
 
 export class SettingsController {
   // Obter configurações da academia
@@ -41,109 +29,51 @@ export class SettingsController {
     try {
       console.log('Buscando configurações da academia...');
       
-      // Garantir que os repositórios estão inicializados
-      if (!settingsRepository) {
-        console.log('Aguardando inicialização dos repositórios...');
-        await initRepositories;
-      }
+      // Obter repositórios
+      const { settingsRepository } = await getRepositories();
       
-      console.log('Repository:', settingsRepository);
       const settings = await settingsRepository.findOne({ where: {} });
-      console.log('Configurações encontradas:', settings);
       
       if (!settings) {
-        console.log('Nenhuma configuração encontrada, retornando objeto vazio');
-        // Se não existir configuração, retorna um objeto vazio
-        return res.status(200).json({
-          name: '',
-          email: '',
-          phone: '',
-          address: '',
-          emailNotifications: true,
-          smsNotifications: false,
-          pushNotifications: true
-        });
+        return res.status(404).json({ message: 'Configurações não encontradas' });
       }
-
+      
       return res.json(settings);
     } catch (error) {
       console.error('Erro ao buscar configurações:', error);
-      return res.status(500).json({ message: 'Erro interno do servidor' });
+      return res.status(500).json({ 
+        message: 'Erro ao buscar configurações da academia',
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
     }
   }
 
   // Atualizar configurações da academia
   static async updateGymSettings(req: Request, res: Response) {
     try {
-      // Garantir que os repositórios estão inicializados
-      if (!settingsRepository) {
-        await initRepositories;
-      }
-      const { name, email, phone, address, emailNotifications, smsNotifications, pushNotifications } = req.body;
+      console.log('Atualizando configurações da academia...');
       
-      let settings = await settingsRepository.findOne({ where: {} });
+      const { settingsRepository } = await getRepositories();
+      const settings = await settingsRepository.findOne({ where: {} });
       
       if (!settings) {
-        // Se não existir configuração, cria uma nova
-        settings = new GymSettings();
+        return res.status(404).json({ message: 'Configurações não encontradas' });
       }
       
-      // Atualiza os campos
-      settings.name = name;
-      settings.email = email;
-      settings.phone = phone;
-      settings.address = address;
-      settings.emailNotifications = emailNotifications;
-      settings.smsNotifications = smsNotifications;
-      settings.pushNotifications = pushNotifications;
+      // Atualiza apenas os campos fornecidos
+      Object.assign(settings, req.body);
       
       await settingsRepository.save(settings);
       
       return res.json({ message: 'Configurações atualizadas com sucesso', settings });
     } catch (error) {
       console.error('Erro ao atualizar configurações:', error);
-      return res.status(500).json({ message: 'Erro ao atualizar configurações' });
+      return res.status(500).json({ 
+        message: 'Erro ao atualizar configurações',
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
     }
   }
 
-  // Alterar senha do administrador
-  static async changePassword(req: Request, res: Response) {
-    try {
-      // Garantir que os repositórios estão inicializados
-      if (!settingsRepository || !userRepository) {
-        await initRepositories;
-      }
-      const { currentPassword, newPassword } = req.body;
-      const userId = req.user?.id;
-      
-      if (!userId) {
-        return res.status(401).json({ message: 'Usuário não autenticado' });
-      }
-      
-      const user = await userRepository.findOne({ where: { id: userId } });
-      
-      if (!user) {
-        return res.status(404).json({ message: 'Usuário não encontrado' });
-      }
-      
-      // Verifica a senha atual
-      const isPasswordValid = await bcrypt.compare(currentPassword, user.passwordHash);
-      
-      if (!isPasswordValid) {
-        return res.status(400).json({ message: 'Senha atual incorreta' });
-      }
-      
-      // Atualiza a senha
-      const saltRounds = 10;
-      const newPasswordHash = await bcrypt.hash(newPassword, saltRounds);
-      
-      user.passwordHash = newPasswordHash;
-      await userRepository.save(user);
-      
-      return res.json({ message: 'Senha alterada com sucesso' });
-    } catch (error) {
-      console.error('Erro ao alterar senha:', error);
-      return res.status(500).json({ message: 'Erro ao alterar senha' });
-    }
-  }
+  // Outros métodos do controller...
 }

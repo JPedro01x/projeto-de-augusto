@@ -19,6 +19,7 @@ const Dashboard = () => {
         setLoading(true);
         const data = await dashboardAPI.getStats();
         setStats(data);
+        setError(null);
       } catch (err) {
         console.error('Erro ao buscar dados do dashboard:', err);
         setError('Falha ao carregar os dados do dashboard');
@@ -29,6 +30,34 @@ const Dashboard = () => {
 
     fetchDashboardData();
   }, []);
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <span className="ml-2">Carregando dados do dashboard...</span>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <div className="p-4 text-red-500">
+        <p>Erro ao carregar o dashboard: {error}</p>
+      </div>
+    );
+  }
+
+  // Show empty state if no stats
+  if (!stats) {
+    return (
+      <div className="p-4">
+        <p>Nenhum dado disponível para exibir no momento.</p>
+      </div>
+    );
+  }
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -44,39 +73,39 @@ const Dashboard = () => {
   const statsData = [
     {
       title: 'Alunos Ativos',
-      value: stats?.summary.activeStudents.count.toString() || '0',
-      change: stats ? formatPercentage(stats.summary.activeStudents.change) : '0%',
+      value: stats?.summary?.activeStudents?.count?.toString() || '0',
+      change: stats?.summary?.activeStudents?.change ? formatPercentage(stats.summary.activeStudents.change) : '0%',
       icon: Users,
       color: 'text-primary',
       bgColor: 'bg-primary/10',
-      trend: stats?.summary.activeStudents.trend || 'up',
+      trend: stats?.summary?.activeStudents?.trend || 'up',
     },
     {
       title: 'Receita Mensal',
-      value: stats ? formatCurrency(stats.summary.monthlyRevenue.amount) : 'R$ 0',
-      change: stats ? formatPercentage(stats.summary.monthlyRevenue.change) : '0%',
+      value: stats?.summary?.monthlyRevenue?.amount ? formatCurrency(stats.summary.monthlyRevenue.amount) : 'R$ 0',
+      change: stats?.summary?.monthlyRevenue?.change ? formatPercentage(stats.summary.monthlyRevenue.change) : '0%',
       icon: DollarSign,
       color: 'text-green-500',
       bgColor: 'bg-green-500/10',
-      trend: stats?.summary.monthlyRevenue.trend || 'up',
+      trend: stats?.summary?.monthlyRevenue?.trend || 'up',
     },
     {
       title: 'Presença Hoje',
-      value: stats?.summary.todayAttendance.count.toString() || '0',
-      change: stats ? formatPercentage(stats.summary.todayAttendance.change) : '0%',
+      value: stats?.summary?.todayAttendance?.count?.toString() || '0',
+      change: stats?.summary?.todayAttendance?.change ? formatPercentage(stats.summary.todayAttendance.change) : '0%',
       icon: UserCheck,
       color: 'text-secondary',
       bgColor: 'bg-secondary/10',
-      trend: stats?.summary.todayAttendance.trend || 'up',
+      trend: stats?.summary?.todayAttendance?.trend || 'up',
     },
     {
       title: 'Treinos Ativos',
-      value: stats?.summary.activeWorkouts.count.toString() || '0',
-      change: stats ? formatPercentage(stats.summary.activeWorkouts.change) : '0%',
+      value: stats?.summary?.activeWorkouts?.count?.toString() || '0',
+      change: stats?.summary?.activeWorkouts?.change ? formatPercentage(stats.summary.activeWorkouts.change) : '0%',
       icon: Dumbbell,
       color: 'text-accent',
       bgColor: 'bg-accent/10',
-      trend: stats?.summary.activeWorkouts.trend || 'up',
+      trend: stats?.summary?.activeWorkouts?.trend || 'up',
     },
   ];
 
@@ -162,7 +191,7 @@ const Dashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {stats.recentActivities.length > 0 ? (
+              {stats?.recentActivities?.length > 0 ? (
                 stats.recentActivities.map((activity, index) => (
                   <div
                     key={index}
@@ -200,12 +229,14 @@ const Dashboard = () => {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-sm">Taxa de Presença</span>
-                <span className="text-sm font-semibold">{stats.weeklyStats.attendanceRate}%</span>
+                <span className="text-sm font-semibold">
+                  {stats?.weeklyStats?.attendanceRate !== undefined ? `${stats.weeklyStats.attendanceRate}%` : '0%'}
+                </span>
               </div>
               <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
                 <div 
                   className="h-full gradient-primary" 
-                  style={{ width: `${Math.min(stats.weeklyStats.attendanceRate, 100)}%` }}
+                  style={{ width: `${Math.min(stats?.weeklyStats?.attendanceRate || 0, 100)}%` }}
                 />
               </div>
             </div>
@@ -213,12 +244,14 @@ const Dashboard = () => {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-sm">Novos Alunos</span>
-                <span className="text-sm font-semibold">{stats.weeklyStats.newStudents}</span>
+                <span className="text-sm font-semibold">
+                  {stats?.weeklyStats?.newStudents ?? 0}
+                </span>
               </div>
               <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
                 <div 
                   className="h-full gradient-primary" 
-                  style={{ width: `${Math.min((stats.weeklyStats.newStudents / 25) * 100, 100)}%` }}
+                  style={{ width: `${Math.min((stats?.weeklyStats?.newStudents ?? 0 / 25) * 100, 100)}%` }}
                 />
               </div>
             </div>
@@ -226,12 +259,14 @@ const Dashboard = () => {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-sm">Renovações</span>
-                <span className="text-sm font-semibold">{stats.weeklyStats.renewals}</span>
+                <span className="text-sm font-semibold">
+                  {stats?.weeklyStats?.renewals ?? 0}
+                </span>
               </div>
               <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
                 <div 
                   className="h-full gradient-primary" 
-                  style={{ width: `${Math.min((stats.weeklyStats.renewals / 50) * 100, 100)}%` }}
+                  style={{ width: `${Math.min((stats?.weeklyStats?.renewals ?? 0 / 50) * 100, 100)}%` }}
                 />
               </div>
             </div>
@@ -241,13 +276,13 @@ const Dashboard = () => {
                 <div>
                   <p className="text-xs text-muted-foreground">Plano Mais Vendido</p>
                   <p className="text-lg font-bold text-primary">
-                    {stats.weeklyStats.mostPopularPlan || 'Nenhum'}
+                    {stats?.weeklyStats?.mostPopularPlan || 'Nenhum'}
                   </p>
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Horário de Pico</p>
                   <p className="text-lg font-bold text-primary">
-                    {stats.weeklyStats.peakHour}
+                    {stats?.weeklyStats?.peakHour || '--:--'}
                   </p>
                 </div>
               </div>

@@ -1,12 +1,26 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import * as jwt from 'jsonwebtoken';
-import { AppDataSource } from '../config/database';
+import { AppDataSource } from '../data-source';
 import { User } from '../entities/User';
+
+interface UserResponse {
+  id: number;
+  name: string;
+  email: string;
+  role: string;
+  cpf?: string;
+  phone?: string;
+  instructor?: {
+    specialty?: string;
+    hireDate?: Date;
+    certifications?: string;
+  };
+}
 
 export const register = async (req: Request, res: Response) => {
   try {
-    const { name, email, password, userType = 'student' } = req.body;
+    const { name, email, password, role = 'student' } = req.body;
 
     const repo = AppDataSource.getRepository(User);
     const exists = await repo.findOne({ where: { email } });
@@ -15,7 +29,13 @@ export const register = async (req: Request, res: Response) => {
     const salt = await bcrypt.genSalt(10);
     const passwordHash = await bcrypt.hash(password, salt);
 
-    const user = repo.create({ name, email, passwordHash, userType, status: 'active' });
+    const user = repo.create({ 
+      name, 
+      email, 
+      password: passwordHash, 
+      role: role, 
+      isActive: true 
+    });
     await repo.save(user);
 
     const jwtSecret = process.env.JWT_SECRET || 'your-secret-key';
@@ -24,7 +44,7 @@ export const register = async (req: Request, res: Response) => {
     // Usar uma função de callback para evitar problemas de tipagem
     const token = await new Promise<string>((resolve, reject) => {
       jwt.sign(
-        { user: { id: user.id, userType: user.userType } },
+        { user: { id: user.id, role: user.role } },
         jwtSecret,
         { expiresIn: jwtExpiresIn } as jwt.SignOptions,
         (err, token) => {
@@ -41,7 +61,7 @@ export const register = async (req: Request, res: Response) => {
         id: user.id,
         name: user.name,
         email: user.email,
-        userType: user.userType,
+        role: user.role,
       },
     });
   } catch (e) {
@@ -60,11 +80,19 @@ export const login = async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'Email e senha são obrigatórios' });
     }
     
+    console.log('Procurando usuário no banco de dados...');
     const userRepo = AppDataSource.getRepository(User);
-    const user = await userRepo.findOne({ 
-      where: { email },
-      relations: ['instructor']
-    });
+    let user;
+    try {
+      user = await userRepo.findOne({ 
+        where: { email }
+      });
+      console.log('Resultado da busca:', user ? 'Usuário encontrado' : 'Usuário não encontrado');
+    } catch (error) {
+      const dbError = error as Error;
+      console.error('Erro ao buscar usuário no banco de dados:', dbError);
+      return res.status(500).json({ message: 'Erro ao buscar usuário', error: dbError.message });
+    }
     
     if (!user) {
       console.error('Usuário não encontrado:', email);
@@ -72,9 +100,17 @@ export const login = async (req: Request, res: Response) => {
     }
 
     console.log('Usuário encontrado, verificando senha...');
-    const ok = await bcrypt.compare(password, user.passwordHash);
+    let passwordMatch = false;
+    try {
+      passwordMatch = await bcrypt.compare(password, user.password);
+      console.log('Resultado da comparação de senha:', passwordMatch ? 'Senha correta' : 'Senha incorreta');
+    } catch (error) {
+      const bcryptError = error as Error;
+      console.error('Erro ao comparar senhas:', bcryptError);
+      return res.status(500).json({ message: 'Erro ao verificar senha', error: bcryptError.message });
+    }
     
-    if (!ok) {
+    if (!passwordMatch) {
       console.error('Senha incorreta para o usuário:', email);
       return res.status(400).json({ message: 'Credenciais inválidas' });
     }
@@ -84,46 +120,58 @@ export const login = async (req: Request, res: Response) => {
     const jwtSecret = process.env.JWT_SECRET || 'your-secret-key';
     const jwtExpiresIn = process.env.JWT_EXPIRES_IN || '1d';
     
-    // Usar uma função de callback para evitar problemas de tipagem
-    const token = await new Promise<string>((resolve, reject) => {
-      jwt.sign(
-        { user: { id: user.id, userType: user.userType } },
-        jwtSecret,
-        { expiresIn: jwtExpiresIn } as jwt.SignOptions,
-        (err, token) => {
-          if (err) reject(err);
-          else if (!token) reject(new Error('Token not generated'));
-          else resolve(token);
-        }
-      );
-    });
+    console.log('Gerando token JWT...');
+    try {
+      const token = await new Promise<string>((resolve, reject) => {
+        jwt.sign(
+          { user: { id: user.id, role: user.role } },
+          jwtSecret,
+          { expiresIn: jwtExpiresIn } as jwt.SignOptions,
+          (err, token) => {
+            if (err) {
+              console.error('Erro ao gerar token JWT:', err);
+              reject(err);
+            } else if (!token) {
+              const error = new Error('Token not generated');
+              console.error(error);
+              reject(error);
+            } else {
+              console.log('Token JWT gerado com sucesso');
+              resolve(token);
+            }
+          }
+        );
+      });
 
-    // Montar resposta base com dados do usuário
-    const response: any = {
-      token,
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        userType: user.userType,
-        cpf: user.cpf,
-        phone: user.phone,
-      },
-    };
-
-    // Se for um instrutor, adicionar informações adicionais
-    if (user.userType === 'instructor' && user.instructor) {
-      response.user.instructor = {
-        specialty: user.instructor.specialty,
-        hireDate: user.instructor.hireDate,
-        certifications: user.instructor.certifications,
-        schedule: 'Seg a Sex: 08:00 - 18:00' // Valor padrão, ajuste conforme necessário
+      const response: { token: string; user: UserResponse } = {
+        token,
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          ...(user.cpf && { cpf: user.cpf }),
+          ...(user.phone && { phone: user.phone }),
+        },
       };
-    }
 
-    return res.json(response);
-  } catch (e) {
-    console.error(e);
-    return res.status(500).json({ message: 'Server error' });
+      console.log('Login concluído com sucesso para o usuário:', user.email);
+      return res.json(response);
+    } catch (error) {
+      const tokenError = error as Error;
+      console.error('Erro durante a geração do token:', tokenError);
+      return res.status(500).json({ 
+        message: 'Erro ao gerar token de autenticação',
+        error: tokenError.message 
+      });
+    }
+  } catch (error) {
+    const e = error as Error;
+    console.error('Erro inesperado no login:', e);
+    return res.status(500).json({ 
+      message: 'Erro interno do servidor',
+      error: e.message,
+      stack: process.env.NODE_ENV === 'development' ? e.stack : undefined
+    });
   }
 };

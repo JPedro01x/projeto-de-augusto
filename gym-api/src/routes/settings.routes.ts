@@ -7,6 +7,7 @@ const router = Router();
 // Rotas de configurações da academia
 router.get('/gym-settings', authenticateToken, SettingsController.getGymSettings);
 router.put('/gym-settings', authenticateToken, SettingsController.updateGymSettings);
-router.post('/change-password', authenticateToken, SettingsController.changePassword);
+
+// Rota de mudança de senha removida temporariamente
 
 export { router as settingsRoutes };

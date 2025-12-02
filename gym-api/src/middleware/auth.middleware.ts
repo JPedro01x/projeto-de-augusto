@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import { AppDataSource } from '../config/database';
+import { AppDataSource } from '../data-source';
 import { User, UserRole } from '../entities/User';
 
 // Definir a interface para o payload do JWT
@@ -34,13 +34,20 @@ export const authenticateToken = async (req: Request, res: Response, next: NextF
     }
 
     // Verificar e decodificar o token JWT
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key') as JwtPayload;
+    const decoded: any = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
     
+    // Extrair userId do payload (pode estar em { user: { id } } ou { userId })
+    const userId = decoded?.user?.id || decoded?.userId;
+    
+    if (!userId) {
+      return res.status(401).json({ message: 'Token inválido: ID do usuário não encontrado' });
+    }
+
     // Verificar se o usuário existe no banco de dados
     const userRepository = AppDataSource.getRepository(User);
     const user = await userRepository.findOne({ 
-      where: { id: decoded.userId },
-      select: ['id', 'name', 'email', 'userType', 'status', 'createdAt', 'updatedAt']
+      where: { id: userId },
+      select: ['id', 'name', 'email', 'role', 'createdAt', 'updatedAt']
     });
 
     if (!user) {
@@ -50,8 +57,8 @@ export const authenticateToken = async (req: Request, res: Response, next: NextF
     // Adicionar o usuário à requisição para uso posterior
     req.user = {
       id: user.id,
-      userType: user.userType,
-      instructorId: decoded.instructorId
+      userType: (user.role as UserRole) || 'user',
+      instructorId: decoded?.instructorId
     };
 
     next();
