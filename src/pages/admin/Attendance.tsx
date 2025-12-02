@@ -3,11 +3,25 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Calendar } from '@/components/ui/calendar';
-import { UserCheck, TrendingUp, Users } from 'lucide-react';
+import { UserCheck, TrendingUp, Users, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useAttendance } from '@/hooks/use-attendance';
 import { Student } from '@/types';
+import { studentAPI } from '@/services/api';
+import { toast } from '@/components/ui/use-toast';
+
+type AttendanceStats = {
+  activeToday: number;
+  totalToday: number;
+  weeklyStats: {
+    [key: string]: {
+      total: number;
+      percentage: number;
+    };
+  };
+  monthlyPercentage: number;
+};
 
 const Attendance = () => {
   const [date, setDate] = useState<Date>(new Date());
@@ -15,23 +29,121 @@ const Attendance = () => {
   const [students, setStudents] = useState<Student[]>([]);
   const { stats, checkIn, removeAttendance, attendances } = useAttendance();
   
-  // Carrega a lista de alunos do localStorage
+  // Carrega a lista de alunos da API
+  const [loading, setLoading] = useState(true);
+  const [removingId, setRemovingId] = useState<string | null>(null);
+  
   useEffect(() => {
-    const savedStudents = localStorage.getItem('students');
-    if (savedStudents) {
-      setStudents(JSON.parse(savedStudents));
-    }
+    const fetchStudents = async () => {
+      try {
+        setLoading(true);
+        const data = await studentAPI.list();
+        setStudents(data);
+      } catch (error) {
+        console.error('Erro ao carregar alunos:', error);
+        toast({
+          title: 'Erro',
+          description: 'Não foi possível carregar a lista de alunos',
+          variant: 'destructive',
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchStudents();
   }, []);
 
-  const filteredStudents = students.filter(student =>
-    student.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
-    student.status === 'active'
-  ).map(student => ({
-    ...student,
-    lastAttendance: attendances
-      .filter(a => a.studentId === student.id)
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0]?.date
-  }));
+  const handleCheckIn = async (studentId: string) => {
+    try {
+      setRemovingId(studentId);
+      const success = await checkIn(studentId);
+      
+      if (success) {
+        toast({
+          title: 'Sucesso',
+          description: 'Presença registrada com sucesso',
+          variant: 'default',
+        });
+      } else {
+        toast({
+          title: 'Aviso',
+          description: 'Presença já registrada para hoje',
+          variant: 'default',
+        });
+      }
+    } catch (error) {
+      console.error('Erro ao registrar presença:', error);
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível registrar a presença',
+        variant: 'destructive',
+      });
+    } finally {
+      setRemovingId(null);
+    }
+  };
+
+  const handleRemoveAttendance = async (studentId: string) => {
+    try {
+      setRemovingId(studentId);
+      const success = await removeAttendance(studentId);
+      
+      if (success) {
+        toast({
+          title: 'Sucesso',
+          description: 'Presença removida com sucesso',
+          variant: 'default',
+        });
+      } else {
+        toast({
+          title: 'Aviso',
+          description: 'Nenhuma presença encontrada para remoção',
+          variant: 'default',
+        });
+      }
+    } catch (error) {
+      console.error('Erro ao remover presença:', error);
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível remover a presença',
+        variant: 'destructive',
+      });
+    } finally {
+      setRemovingId(null);
+    }
+  };
+
+  const filteredStudents = students
+    .filter(student => 
+      student.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
+      student.status === 'active'
+    )
+    .map(student => {
+      const studentAttendances = attendances.filter(a => a.studentId === student.id);
+      const lastAttendance = studentAttendances
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0]?.date;
+      
+      const today = new Date().toISOString().split('T')[0];
+      const hasCheckedInToday = studentAttendances.some(
+        a => a.date.startsWith(today)
+      );
+
+      return {
+        ...student,
+        lastAttendance,
+        hasCheckedInToday
+      };
+    });
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <span className="ml-2">Carregando lista de alunos...</span>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -114,60 +226,103 @@ const Attendance = () => {
           </CardContent>
         </Card>
 
-        {/* Today's Attendance */}
+        {/* Lista de Alunos */}
         <Card className="lg:col-span-2 border-primary/20">
           <CardHeader>
-            <CardTitle>Marcar Presença</CardTitle>
-            <CardDescription>
-              {format(date, "EEEE, dd 'de' MMMM", { locale: ptBR })}
-            </CardDescription>
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div>
+                <CardTitle>Lista de Alunos</CardTitle>
+                <CardDescription>Clique no botão para registrar presença</CardDescription>
+              </div>
+              <div className="w-full md:w-64">
+                <Input
+                  placeholder="Buscar aluno..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full"
+                />
+              </div>
+            </div>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <Input
-              placeholder="Buscar aluno..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-
-            <div className="space-y-2 max-h-[500px] overflow-y-auto">
-              {filteredStudents.map((student) => (
-                <div
-                  key={student.id}
-                  className="p-4 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full gradient-primary flex items-center justify-center text-primary-foreground font-semibold">
-                        {student.name.charAt(0)}
+          <CardContent>
+            <div className="space-y-2">
+              {filteredStudents.length > 0 ? (
+                filteredStudents.map((student) => {
+                  const isPresent = student.hasCheckedInToday;
+                  const lastAttendance = student.lastAttendance 
+                    ? format(new Date(student.lastAttendance), "PPp", { locale: ptBR })
+                    : 'Nunca registrado';
+                  
+                  return (
+                    <div
+                      key={student.id}
+                      className={`flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 border rounded-lg transition-colors ${
+                        isPresent ? 'bg-green-50 border-green-200' : 'hover:bg-muted/50'
+                      }`}
+                    >
+                      <div className="mb-2 sm:mb-0">
+                        <h4 className="font-medium">{student.name}</h4>
+                        <p className="text-sm text-muted-foreground">
+                          {isPresent 
+                            ? 'Presente hoje' 
+                            : `Última presença: ${lastAttendance}`}
+                        </p>
                       </div>
-                      <div>
-                        <div className="flex flex-col">
-                          <span className="font-medium">{student.name}</span>
-                          <span className="text-xs text-muted-foreground">
-                            {student.lastAttendance 
-                              ? `Última presença: ${new Date(student.lastAttendance).toLocaleDateString('pt-BR')}`
-                              : 'Nenhuma presença registrada'}
-                          </span>
-                        </div>
+                      <div className="flex items-center gap-2 w-full sm:w-auto">
+                        <Button
+                          variant={isPresent ? 'outline' : 'default'}
+                          className={`w-full sm:w-auto ${
+                            isPresent ? 'border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700' : ''
+                          }`}
+                          onClick={() => {
+                            if (isPresent) {
+                              handleRemoveAttendance(student.id);
+                            } else {
+                              handleCheckIn(student.id);
+                            }
+                          }}
+                          disabled={loading || removingId === student.id}
+                        >
+                          {loading || removingId === student.id ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              {isPresent ? 'Removendo...' : 'Registrando...'}
+                            </>
+                          ) : isPresent ? (
+                            'Remover presença'
+                          ) : (
+                            <>
+                              <UserCheck className="mr-2 h-4 w-4" />
+                              Registrar presença
+                            </>
+                          )}
+                        </Button>
                       </div>
                     </div>
-                    
-                    <Button
-                      variant="outline"
-                      onClick={() => checkIn(student.id)}
+                  );
+                })
+              ) : (
+                <div className="text-center py-12 space-y-2">
+                  <Users className="h-12 w-12 mx-auto text-muted-foreground/30" />
+                  <p className="text-muted-foreground">
+                    {searchTerm 
+                      ? 'Nenhum aluno encontrado com o termo de busca.'
+                      : 'Nenhum aluno encontrado.'
+                    }
+                  </p>
+                  {searchTerm && (
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="mt-2"
+                      onClick={() => setSearchTerm('')}
                     >
-                      Marcar Presença
+                      Limpar busca
                     </Button>
-                  </div>
+                  )}
                 </div>
-              ))}
+              )}
             </div>
-
-            {filteredStudents.length === 0 && (
-              <div className="text-center p-8 text-muted-foreground">
-                Nenhum aluno encontrado
-              </div>
-            )}
           </CardContent>
         </Card>
       </div>

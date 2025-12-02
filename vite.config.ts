@@ -16,7 +16,22 @@ export default defineConfig(({ mode }) => ({
       '/api': {
         target: 'http://localhost:3000',
         changeOrigin: true,
-        secure: false
+        secure: false,
+        ws: true,
+        // Não remover o /api da URL
+        // rewrite: (path) => path.replace(/^\/api/, ''),
+        configure: (proxy, _options) => {
+          proxy.on('error', (err, _req, _res) => {
+            console.log('Erro no proxy:', err);
+          });
+          proxy.on('proxyReq', (proxyReq, req, _res) => {
+            console.log('Enviando requisição para:', req.method, req.url);
+            console.log('Headers:', req.headers);
+          });
+          proxy.on('proxyRes', (proxyRes, req, _res) => {
+            console.log('Resposta recebida:', proxyRes.statusCode, req.url);
+          });
+        }
       }
     }
   },

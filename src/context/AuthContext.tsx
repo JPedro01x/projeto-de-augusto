@@ -41,7 +41,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       // Verificar se o backend está acessível
       try {
-        const healthCheck = await fetch('http://localhost:3000/health');
+        const healthCheck = await fetch('http://localhost:3000/api/health');
         console.log('Status do health check:', healthCheck.status);
       } catch (healthError) {
         console.error('Erro ao conectar ao backend:', healthError);
@@ -49,7 +49,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return false;
       }
       
-      const response = await fetch('http://localhost:3000/auth/login', {
+      const response = await fetch('http://localhost:3000/api/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

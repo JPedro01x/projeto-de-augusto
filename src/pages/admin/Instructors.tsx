@@ -20,11 +20,16 @@ interface Instructor {
   name: string;
   email: string;
   phone: string;
+  cpf: string;
   specialty: string;
   certifications: string;
-  schedule: string;
+  hireDate: string;
+  photoUrl: string;
+  bio: string;
+  salary: number;
   activeStudents: number;
   password?: string; // Senha opcional para edição
+  schedule?: string; // Opcional, pois não está vindo da API
 }
 
 const Instructors = () => {
@@ -42,37 +47,94 @@ const Instructors = () => {
   useEffect(() => {
     const fetchInstructors = async () => {
       try {
-        const response = await fetch('http://localhost:3000/api/instructors', {
+        console.log('Buscando instrutores...');
+        const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+        
+        if (!token) {
+          console.error('Nenhum token de autenticação encontrado');
+          toast({
+            title: 'Erro de autenticação',
+            description: 'Você precisa estar logado para acessar esta página',
+            variant: 'destructive',
+          });
+          return;
+        }
+        
+        console.log('Token encontrado, fazendo requisição...');
+        
+        const apiUrl = '/api/instructors';
+        console.log(`Iniciando requisição para ${apiUrl}`);
+        // Fazer a requisição através do proxy
+        const response = await fetch(apiUrl, {
+          method: 'GET',
           headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token') || sessionStorage.getItem('token')}`,
-          },
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          }
         });
         
+        console.log('Resposta da API:', response.status, response.statusText);
+        
+        if (response.status === 401) {
+          // Token inválido ou expirado
+          console.error('Erro 401: Não autorizado');
+          toast({
+            title: 'Sessão expirada',
+            description: 'Por favor, faça login novamente',
+            variant: 'destructive',
+          });
+          // Limpa os dados de autenticação
+          localStorage.removeItem('token');
+          sessionStorage.removeItem('token');
+          window.location.href = '/login';
+          return;
+        }
+        
         if (!response.ok) {
-          throw new Error('Erro ao carregar instrutores');
+          const errorText = await response.text();
+          let errorData;
+          try {
+            errorData = JSON.parse(errorText);
+          } catch (e) {
+            errorData = { message: errorText };
+          }
+          console.error('Erro na resposta da API:', response.status, errorData);
+          throw new Error(errorData.message || `Erro ${response.status} ao carregar instrutores`);
         }
         
         const data = await response.json();
+        console.log('Dados recebidos da API:', data);
+        
+        if (!Array.isArray(data)) {
+          console.error('Resposta da API não é um array:', data);
+          throw new Error('Formato de dados inválido: esperado um array de instrutores');
+        }
         
         // Mapeia os dados da API para o formato esperado pelo componente
         const formattedInstructors = data.map((instructor: any) => ({
-          id: instructor.id.toString(),
-          name: instructor.name,
-          email: instructor.email,
+          id: instructor.id?.toString() || '',
+          name: instructor.name || 'Nome não informado',
+          email: instructor.email || '',
           phone: instructor.phone || '',
-          specialty: instructor.specialty || '',
-          certifications: instructor.certifications || '',
-          schedule: instructor.schedule || 'Seg a Sex: 08:00 - 18:00',
-          activeStudents: 0, // Será calculado posteriormente
-          cpf: instructor.cpf || ''
+          cpf: instructor.cpf || '',
+          specialty: instructor.specialty || 'Não especificado',
+          certifications: instructor.certifications || 'Nenhuma certificação informada',
+          hireDate: instructor.hireDate || new Date().toISOString(),
+          photoUrl: instructor.photoUrl || '',
+          bio: instructor.bio || '',
+          salary: instructor.salary || 0,
+          activeStudents: instructor.activeStudents || 0,
+          schedule: instructor.schedule || 'Seg a Sex: 08:00 - 18:00' // Usa o valor da API se disponível
         }));
         
+        console.log('Instrutores formatados:', formattedInstructors);
         setInstructors(formattedInstructors);
       } catch (error) {
         console.error('Erro ao carregar instrutores:', error);
         toast({
           title: 'Erro',
-          description: 'Não foi possível carregar a lista de instrutores',
+          description: error instanceof Error ? error.message : 'Não foi possível carregar a lista de instrutores',
           variant: 'destructive',
         });
       }
@@ -82,16 +144,29 @@ const Instructors = () => {
   }, []);
 
   const [formData, setFormData] = useState<Omit<Instructor, 'id' | 'activeStudents'> & {
-    cpf?: string;
-    newPassword?: string;
-    confirmPassword?: string;
+    cpf: string;
+    hireDate: string;
+    photoUrl: string;
+    bio: string;
+    salary: number;
+    password: string;
+    newPassword: string;
+    confirmPassword: string;
   }>({
     name: '',
     email: '',
     phone: '',
+    cpf: '',
     specialty: '',
     certifications: '',
-    schedule: '',
+    hireDate: new Date().toISOString(),
+    photoUrl: '',
+    bio: '',
+    salary: 0,
+    schedule: 'Seg a Sex: 08:00 - 18:00',
+    password: '',
+    newPassword: '',
+    confirmPassword: '',
   });
 
   const filteredInstructors = instructors.filter(instructor =>
@@ -106,9 +181,17 @@ const Instructors = () => {
       name: instructor.name,
       email: instructor.email,
       phone: instructor.phone,
+      cpf: instructor.cpf || '',
       specialty: instructor.specialty,
       certifications: instructor.certifications,
-      schedule: instructor.schedule,
+      hireDate: instructor.hireDate || new Date().toISOString(),
+      photoUrl: instructor.photoUrl || '',
+      bio: instructor.bio || '',
+      salary: instructor.salary || 0,
+      schedule: instructor.schedule || 'Seg a Sex: 08:00 - 18:00',
+      password: '',
+      newPassword: '',
+      confirmPassword: ''
     });
     setIsEditDialogOpen(true);
   };
@@ -164,9 +247,14 @@ const Instructors = () => {
       name: '',
       email: '',
       phone: '',
+      cpf: '',
       specialty: '',
       certifications: '',
-      schedule: '',
+      hireDate: new Date().toISOString(),
+      photoUrl: '',
+      bio: '',
+      salary: 0,
+      schedule: 'Seg a Sex: 08:00 - 18:00',
       password: '',
       newPassword: '',
       confirmPassword: '',
@@ -207,7 +295,7 @@ const Instructors = () => {
       }
 
 
-      const response = await fetch('http://localhost:3000/api/instructors', {
+      const response = await fetch('http://localhost:5000/api/instructors', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -232,15 +320,20 @@ const Instructors = () => {
 
       const newInstructor = await response.json();
       
-      // Atualiza a lista de instrutores
+      // Atualiza a lista de instrutores com todos os campos obrigatórios
       setInstructors([...instructors, {
         id: newInstructor.id.toString(),
         name: newInstructor.name,
         email: newInstructor.email,
         phone: newInstructor.phone || '',
-        specialty: newInstructor.instructor?.specialty || '',
-        certifications: newInstructor.instructor?.certifications || '',
-        schedule: newInstructor.instructor?.schedule || 'Seg a Sex: 08:00 - 18:00',
+        cpf: newInstructor.cpf || '',
+        specialty: newInstructor.specialty || newInstructor.instructor?.specialty || 'Não especificado',
+        certifications: newInstructor.certifications || newInstructor.instructor?.certifications || '',
+        hireDate: newInstructor.hireDate || new Date().toISOString(),
+        photoUrl: newInstructor.photoUrl || '',
+        bio: newInstructor.bio || '',
+        salary: newInstructor.salary || 0,
+        schedule: newInstructor.schedule || newInstructor.instructor?.schedule || 'Seg a Sex: 08:00 - 18:00',
         activeStudents: 0,
       }]);
       

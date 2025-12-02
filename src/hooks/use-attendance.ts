@@ -124,13 +124,29 @@ export function useAttendance(studentId?: string) {
     return true;
   }, [attendances, saveAttendances]);
 
-  // Remove uma presença
-  const removeAttendance = useCallback((id: string, date: string) => {
-    saveAttendances(
-      attendances.filter(
-        (a) => !(a.studentId === id && a.date === date)
-      )
-    );
+  // Remove a última presença de um aluno
+  const removeAttendance = useCallback((studentId: string) => {
+    const today = new Date().toISOString().split('T')[0];
+    
+    // Encontra o índice da última presença do aluno hoje
+    const lastAttendanceIndex = [...attendances]
+      .reverse()
+      .findIndex(a => a.studentId === studentId && a.date.startsWith(today));
+    
+    if (lastAttendanceIndex === -1) {
+      console.warn('Nenhuma presença encontrada para remoção');
+      return false;
+    }
+    
+    // Calcula o índice real no array original
+    const realIndex = attendances.length - 1 - lastAttendanceIndex;
+    
+    // Remove a presença
+    const updatedAttendances = [...attendances];
+    updatedAttendances.splice(realIndex, 1);
+    
+    saveAttendances(updatedAttendances);
+    return true;
   }, [attendances, saveAttendances]);
 
   // Atualiza as estatísticas quando os dados mudam
