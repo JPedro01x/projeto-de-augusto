@@ -41,6 +41,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       // Verificar se o backend está acessível
       try {
+<<<<<<< HEAD
         const healthResponse = await fetch('http://localhost:3000/api/health', {
           method: 'GET',
           headers: {
@@ -59,18 +60,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } catch (healthError) {
         console.error('Erro ao conectar ao backend:', healthError);
         throw new Error('Não foi possível conectar ao servidor. Verifique se o backend está rodando corretamente na porta 3000.');
+=======
+        const healthCheck = await fetch('http://localhost:3000/api/health');
+        console.log('Status do health check:', healthCheck.status);
+      } catch (healthError) {
+        console.error('Erro ao conectar ao backend:', healthError);
+        alert('Não foi possível conectar ao servidor. Verifique se o backend está rodando.');
+        return false;
+>>>>>>> 0d414629ca48619aaaa7f2291a3a5d332df37fbf
       }
       
       const response = await fetch('http://localhost:3000/api/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+<<<<<<< HEAD
           'Accept': 'application/json',
           'Cache': 'no-cache'
         },
         body: JSON.stringify({ email, password }),
         credentials: 'include', // Importante para enviar cookies
         mode: 'cors'
+=======
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({ email, password }),
+        credentials: 'include' // Importante para enviar cookies se estiver usando
+>>>>>>> 0d414629ca48619aaaa7f2291a3a5d332df37fbf
       });
 
       console.log('Resposta do servidor:', {

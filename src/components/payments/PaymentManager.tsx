@@ -16,10 +16,16 @@ interface PaymentManagerProps {
   studentId: string;
   studentName: string;
   onPaymentUpdate: () => void;
+<<<<<<< HEAD
   onLocalStatusChange?: (params: { status: PaymentStatus; method: PaymentMethod; lastPaymentDate: string }) => void;
 }
 
 export function PaymentManager({ studentId, studentName, onPaymentUpdate, onLocalStatusChange }: PaymentManagerProps) {
+=======
+}
+
+export function PaymentManager({ studentId, studentName, onPaymentUpdate }: PaymentManagerProps) {
+>>>>>>> 0d414629ca48619aaaa7f2291a3a5d332df37fbf
   const { toast } = useToast();
   const { updateStudent } = useStudents();
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('pix');
@@ -65,12 +71,19 @@ export function PaymentManager({ studentId, studentName, onPaymentUpdate, onLoca
   const handleUpdatePaymentStatus = async () => {
     try {
       setIsLoading(true);
+<<<<<<< HEAD
       const lastPaymentDate = new Date().toISOString();
+=======
+>>>>>>> 0d414629ca48619aaaa7f2291a3a5d332df37fbf
       
       await updateStudent.mutateAsync({
         id: studentId,
         data: {
+<<<<<<< HEAD
           lastPaymentDate,
+=======
+          lastPaymentDate: new Date().toISOString(),
+>>>>>>> 0d414629ca48619aaaa7f2291a3a5d332df37fbf
           paymentStatus: paymentStatus,
           paymentMethod: paymentMethod,
         },
@@ -81,6 +94,7 @@ export function PaymentManager({ studentId, studentName, onPaymentUpdate, onLoca
         description: `Status de pagamento de ${studentName} atualizado com sucesso.`,
       });
       
+<<<<<<< HEAD
       // Atualização otimista no frontend
       onLocalStatusChange?.({
         status: paymentStatus,
@@ -88,6 +102,8 @@ export function PaymentManager({ studentId, studentName, onPaymentUpdate, onLoca
         lastPaymentDate,
       });
       
+=======
+>>>>>>> 0d414629ca48619aaaa7f2291a3a5d332df37fbf
       onPaymentUpdate();
     } catch (error) {
       toast({

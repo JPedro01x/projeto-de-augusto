@@ -2,7 +2,11 @@ import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import * as jwt from 'jsonwebtoken';
 import { AppDataSource } from '../data-source';
+<<<<<<< HEAD
 import { User, UserRole } from '../entities/User';
+=======
+import { User } from '../entities/User';
+>>>>>>> 0d414629ca48619aaaa7f2291a3a5d332df37fbf
 
 interface UserResponse {
   id: number;
@@ -33,7 +37,11 @@ export const register = async (req: Request, res: Response) => {
       name, 
       email, 
       password: passwordHash, 
+<<<<<<< HEAD
       role: role as UserRole, 
+=======
+      role: role, 
+>>>>>>> 0d414629ca48619aaaa7f2291a3a5d332df37fbf
       isActive: true 
     });
     await repo.save(user);
@@ -82,6 +90,7 @@ export const login = async (req: Request, res: Response) => {
     
     console.log('Procurando usuário no banco de dados...');
     const userRepo = AppDataSource.getRepository(User);
+<<<<<<< HEAD
     let userRaw: any;
     try {
       // Selecionar explicitamente os nomes das colunas no banco
@@ -97,13 +106,25 @@ export const login = async (req: Request, res: Response) => {
         .where('user.email = :email', { email })
         .getRawOne();
       console.log('Resultado da busca:', userRaw ? 'Usuário encontrado' : 'Usuário não encontrado');
+=======
+    let user;
+    try {
+      user = await userRepo.findOne({ 
+        where: { email }
+      });
+      console.log('Resultado da busca:', user ? 'Usuário encontrado' : 'Usuário não encontrado');
+>>>>>>> 0d414629ca48619aaaa7f2291a3a5d332df37fbf
     } catch (error) {
       const dbError = error as Error;
       console.error('Erro ao buscar usuário no banco de dados:', dbError);
       return res.status(500).json({ message: 'Erro ao buscar usuário', error: dbError.message });
     }
     
+<<<<<<< HEAD
     if (!userRaw) {
+=======
+    if (!user) {
+>>>>>>> 0d414629ca48619aaaa7f2291a3a5d332df37fbf
       console.error('Usuário não encontrado:', email);
       return res.status(400).json({ message: 'Credenciais inválidas' });
     }
@@ -111,7 +132,11 @@ export const login = async (req: Request, res: Response) => {
     console.log('Usuário encontrado, verificando senha...');
     let passwordMatch = false;
     try {
+<<<<<<< HEAD
       passwordMatch = await bcrypt.compare(password, userRaw.password_hash);
+=======
+      passwordMatch = await bcrypt.compare(password, user.password);
+>>>>>>> 0d414629ca48619aaaa7f2291a3a5d332df37fbf
       console.log('Resultado da comparação de senha:', passwordMatch ? 'Senha correta' : 'Senha incorreta');
     } catch (error) {
       const bcryptError = error as Error;
@@ -124,7 +149,11 @@ export const login = async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'Credenciais inválidas' });
     }
     
+<<<<<<< HEAD
     console.log('Login bem-sucedido para o usuário:', userRaw.id);
+=======
+    console.log('Login bem-sucedido para o usuário:', user.id);
+>>>>>>> 0d414629ca48619aaaa7f2291a3a5d332df37fbf
 
     const jwtSecret = process.env.JWT_SECRET || 'your-secret-key';
     const jwtExpiresIn = process.env.JWT_EXPIRES_IN || '1d';
@@ -133,7 +162,11 @@ export const login = async (req: Request, res: Response) => {
     try {
       const token = await new Promise<string>((resolve, reject) => {
         jwt.sign(
+<<<<<<< HEAD
           { user: { id: userRaw.id, role: userRaw.role } },
+=======
+          { user: { id: user.id, role: user.role } },
+>>>>>>> 0d414629ca48619aaaa7f2291a3a5d332df37fbf
           jwtSecret,
           { expiresIn: jwtExpiresIn } as jwt.SignOptions,
           (err, token) => {
@@ -155,6 +188,7 @@ export const login = async (req: Request, res: Response) => {
       const response: { token: string; user: UserResponse } = {
         token,
         user: {
+<<<<<<< HEAD
           id: userRaw.id,
           name: userRaw.name,
           email: userRaw.email,
@@ -165,6 +199,18 @@ export const login = async (req: Request, res: Response) => {
       };
 
       console.log('Login concluído com sucesso para o usuário:', userRaw.email);
+=======
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          ...(user.cpf && { cpf: user.cpf }),
+          ...(user.phone && { phone: user.phone }),
+        },
+      };
+
+      console.log('Login concluído com sucesso para o usuário:', user.email);
+>>>>>>> 0d414629ca48619aaaa7f2291a3a5d332df37fbf
       return res.json(response);
     } catch (error) {
       const tokenError = error as Error;

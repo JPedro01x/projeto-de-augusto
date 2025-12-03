@@ -172,8 +172,11 @@ export const studentAPI = {
           status: data.status || current.status,
           planType: data.planType || current.planType,
           paymentStatus: data.paymentStatus || current.paymentStatus,
+<<<<<<< HEAD
           lastPaymentDate: data.lastPaymentDate || current.lastPaymentDate,
           nextPaymentDate: data.nextPaymentDate || current.nextPaymentDate,
+=======
+>>>>>>> 0d414629ca48619aaaa7f2291a3a5d332df37fbf
           assignedInstructor: data.assignedInstructor || current.assignedInstructor,
           medicalConditions: data.medicalConditions || current.medicalConditions,
           startDate: data.startDate || current.startDate,
@@ -536,6 +539,7 @@ export const workoutAPI = {
     }
   },
 
+<<<<<<< HEAD
   // Obter treinos de um instrutor específico (usando ID do usuário)
   getInstructorWorkouts: async (instructorId: string): Promise<WorkoutPlan[]> => {
     try {
@@ -546,6 +550,8 @@ export const workoutAPI = {
     }
   },
 
+=======
+>>>>>>> 0d414629ca48619aaaa7f2291a3a5d332df37fbf
   // Obter um treino por ID
   getWorkoutById: async (id: string): Promise<WorkoutPlan | null> => {
     try {

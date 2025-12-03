@@ -256,6 +256,7 @@ const Attendance = () => {
                   return (
                     <div
                       key={student.id}
+<<<<<<< HEAD
                       className={`group flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 rounded-lg transition-all duration-300 ${
                         isPresent 
                           ? 'bg-gradient-to-r from-green-50 to-green-50 border-l-4 border-green-500 shadow-sm' 
@@ -281,17 +282,33 @@ const Attendance = () => {
                         }`}>
                           {isPresent 
                             ? `Registrado às ${format(new Date(), 'HH:mm')}`
+=======
+                      className={`flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 border rounded-lg transition-colors ${
+                        isPresent ? 'bg-green-50 border-green-200' : 'hover:bg-muted/50'
+                      }`}
+                    >
+                      <div className="mb-2 sm:mb-0">
+                        <h4 className="font-medium">{student.name}</h4>
+                        <p className="text-sm text-muted-foreground">
+                          {isPresent 
+                            ? 'Presente hoje' 
+>>>>>>> 0d414629ca48619aaaa7f2291a3a5d332df37fbf
                             : `Última presença: ${lastAttendance}`}
                         </p>
                       </div>
                       <div className="flex items-center gap-2 w-full sm:w-auto">
                         <Button
                           variant={isPresent ? 'outline' : 'default'}
+<<<<<<< HEAD
                           size="sm"
                           className={`w-full sm:w-auto transition-all ${
                             isPresent 
                               ? 'border-red-100 bg-white text-red-600 hover:bg-red-50 hover:text-red-700 hover:border-red-200 shadow-sm' 
                               : 'shadow-sm hover:shadow-md'
+=======
+                          className={`w-full sm:w-auto ${
+                            isPresent ? 'border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700' : ''
+>>>>>>> 0d414629ca48619aaaa7f2291a3a5d332df37fbf
                           }`}
                           onClick={() => {
                             if (isPresent) {
@@ -308,6 +325,7 @@ const Attendance = () => {
                               {isPresent ? 'Removendo...' : 'Registrando...'}
                             </>
                           ) : isPresent ? (
+<<<<<<< HEAD
                             <>
                               <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -318,6 +336,13 @@ const Attendance = () => {
                             <>
                               <UserCheck className="mr-1.5 h-4 w-4" />
                               Registrar
+=======
+                            'Remover presença'
+                          ) : (
+                            <>
+                              <UserCheck className="mr-2 h-4 w-4" />
+                              Registrar presença
+>>>>>>> 0d414629ca48619aaaa7f2291a3a5d332df37fbf
                             </>
                           )}
                         </Button>

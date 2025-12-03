@@ -178,12 +178,15 @@ export const updateStudent = async (req: Request, res: Response) => {
       emergencyContactName,
       emergencyContactPhone,
       status,
+<<<<<<< HEAD
       planType,
       startDate,
       endDate,
       paymentStatus,
       lastPaymentDate,
       nextPaymentDate,
+=======
+>>>>>>> 0d414629ca48619aaaa7f2291a3a5d332df37fbf
     } = req.body;
 
     const userRepo = AppDataSource.getRepository(User);
@@ -213,12 +216,15 @@ export const updateStudent = async (req: Request, res: Response) => {
     }
     if (emergencyContactName !== undefined) student.emergencyContactName = emergencyContactName;
     if (emergencyContactPhone !== undefined) student.emergencyContactPhone = emergencyContactPhone;
+<<<<<<< HEAD
     if (planType !== undefined) student.planType = planType;
     if (startDate !== undefined) student.startDate = startDate;
     if (endDate !== undefined) student.endDate = endDate;
     if (paymentStatus !== undefined) student.paymentStatus = paymentStatus;
     if (lastPaymentDate !== undefined) student.lastPaymentDate = lastPaymentDate;
     if (nextPaymentDate !== undefined) student.nextPaymentDate = nextPaymentDate;
+=======
+>>>>>>> 0d414629ca48619aaaa7f2291a3a5d332df37fbf
     await studentRepo.save(student);
 
     const result = await studentRepo.findOne({ where: { userId: Number(id) }, relations: { user: true } });

@@ -403,7 +403,11 @@ SET @pedro_id = (SELECT id FROM users WHERE name = 'Pedro Costa' LIMIT 1);
 -- Se os alunos não existirem, insira-os
 INSERT IGNORE INTO users (name, email, password_hash, user_type, status, created_at, updated_at) VALUES
 ('João Silva', 'joao@gmail.com', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'student', 'active', NOW(), NOW()),
+<<<<<<< HEAD
 ('Maria Santos', 'mariastudant@gmail.com', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'student', 'active', NOW(), NOW()),
+=======
+('Maria Santos', 'mariastudant@email.com', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'student', 'active', NOW(), NOW()),
+>>>>>>> 0d414629ca48619aaaa7f2291a3a5d332df37fbf
 ('Pedro Costa', 'pedro@gmail.com', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'student', 'active', NOW(), NOW());
 
 -- Inserir alunos na tabela students se não existirem
@@ -411,15 +415,24 @@ INSERT IGNORE INTO students (user_id, registration_date, instructor_id)
 SELECT id, CURDATE(), @carlos_id FROM users WHERE email = 'joao@gmail' AND NOT EXISTS (SELECT 1 FROM students WHERE user_id = (SELECT id FROM users WHERE email = 'joao@gmail'));
 
 INSERT IGNORE INTO students (user_id, registration_date, instructor_id)
+<<<<<<< HEAD
 SELECT id, CURDATE(), @carlos_id FROM users WHERE email = 'mariastudant@gmail.com' AND NOT EXISTS (SELECT 1 FROM students WHERE user_id = (SELECT id FROM users WHERE email = 'mariastudant@email.com'));
+=======
+SELECT id, CURDATE(), @carlos_id FROM users WHERE email = 'mariastudant@email.com' AND NOT EXISTS (SELECT 1 FROM students WHERE user_id = (SELECT id FROM users WHERE email = 'mariastudant@email.com'));
+>>>>>>> 0d414629ca48619aaaa7f2291a3a5d332df37fbf
 
 INSERT IGNORE INTO students (user_id, registration_date, instructor_id)
 SELECT id, CURDATE(), @maria_id FROM users WHERE email = 'pedro@gmail.com' AND NOT EXISTS (SELECT 1 FROM students WHERE user_id = (SELECT id FROM users WHERE email = 'pedro@gmail.com'));
 
 -- Atualizar variáveis com os IDs corretos
 SET @joao_id = (SELECT id FROM users WHERE email = 'joao@gmail.com');
+<<<<<<< HEAD
 SET @maria_aluno_id = (SELECT id FROM users WHERE email = 'mariastudant@gmail.com');
 SET @pedro_id = (SELECT id FROM users WHERE email = 'pedro@gmail.com')
+=======
+SET @maria_aluno_id = (SELECT id FROM users WHERE email = 'mariastudant@email.com');
+SET @pedro_id = (SELECT id FROM users WHERE email = 'pedro@gmail.com');
+>>>>>>> 0d414629ca48619aaaa7f2291a3a5d332df37fbf
 
 -- Inserir treinos
 INSERT INTO workouts (name, description, instructor_id, student_id, start_date, end_date, status, goal, notes) VALUES
@@ -516,6 +529,7 @@ CREATE TABLE IF NOT EXISTS `gym_settings` (
 
 -- Inserir configurações padrão
 INSERT INTO `gym_settings` (`name`, `email`, `phone`, `address`, `email_notifications`, `sms_notifications`, `push_notifications`)
+<<<<<<< HEAD
 VALUES ('GymTech Pro', 'gymtechpro@gmail.com', NULL, NULL, 1, 0, 1);
 
 
@@ -540,3 +554,6 @@ SELECT * FROM user WHERE role = 'instructor' OR role = 'admin';
 
 
 
+=======
+VALUES ('GymTech Pro', 'contato@exemplo.com', NULL, NULL, 1, 0, 1);
+>>>>>>> 0d414629ca48619aaaa7f2291a3a5d332df37fbf
