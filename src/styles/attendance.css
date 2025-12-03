@@ -1,0 +1,48 @@
+.attendance-progress-bar {
+  @apply h-full transition-all duration-500;
+}
+
+/* As classes abaixo serão aplicadas via JavaScript */
+.attendance-progress-0 {
+  width: 0%;
+}
+
+.attendance-progress-10 {
+  width: 10%;
+}
+
+.attendance-progress-20 {
+  width: 20%;
+}
+
+.attendance-progress-30 {
+  width: 30%;
+}
+
+.attendance-progress-40 {
+  width: 40%;
+}
+
+.attendance-progress-50 {
+  width: 50%;
+}
+
+.attendance-progress-60 {
+  width: 60%;
+}
+
+.attendance-progress-70 {
+  width: 70%;
+}
+
+.attendance-progress-80 {
+  width: 80%;
+}
+
+.attendance-progress-90 {
+  width: 90%;
+}
+
+.attendance-progress-100 {
+  width: 100%;
+}
