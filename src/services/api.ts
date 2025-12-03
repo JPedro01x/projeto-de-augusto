@@ -76,6 +76,18 @@ export const apiRequest = async <T>(
   }
 };
 
+// API de Dashboard (admin)
+export const dashboardAPI = {
+  getStats: async (): Promise<DashboardStats> => {
+    try {
+      return await apiRequest<DashboardStats>('/dashboard/stats');
+    } catch (error) {
+      console.error('Erro ao buscar estatísticas do dashboard:', error);
+      throw error;
+    }
+  },
+};
+
 // API de Alunos
 export const studentAPI = {
   // Listar todos os alunos
@@ -172,11 +184,8 @@ export const studentAPI = {
           status: data.status || current.status,
           planType: data.planType || current.planType,
           paymentStatus: data.paymentStatus || current.paymentStatus,
-<<<<<<< HEAD
           lastPaymentDate: data.lastPaymentDate || current.lastPaymentDate,
           nextPaymentDate: data.nextPaymentDate || current.nextPaymentDate,
-=======
->>>>>>> 0d414629ca48619aaaa7f2291a3a5d332df37fbf
           assignedInstructor: data.assignedInstructor || current.assignedInstructor,
           medicalConditions: data.medicalConditions || current.medicalConditions,
           startDate: data.startDate || current.startDate,
@@ -445,87 +454,6 @@ export const instructorAPI = {
     }
   },
 };
-export const dashboardAPI = {
-  // Buscar estatísticas do dashboard
-  getStats: async (): Promise<DashboardStats> => {
-    try {
-      return await apiRequest<DashboardStats>('/dashboard/stats');
-    } catch (error) {
-      console.error('Erro ao buscar estatísticas do dashboard:', error);
-      throw error;
-    }
-  },
-
-  // Buscar resumo financeiro
-  getFinancialSummary: async (): Promise<FinancialSummary> => {
-    try {
-      return await apiRequest<FinancialSummary>('/dashboard/financial-summary');
-    } catch (error) {
-      console.error('Erro ao buscar resumo financeiro:', error);
-      throw error;
-    }
-  },
-
-  // Buscar pagamentos recentes
-  getRecentPayments: async (): Promise<Payment[]> => {
-    try {
-      return await apiRequest<Payment[]>('/dashboard/recent-payments');
-    } catch (error) {
-      console.error('Erro ao buscar pagamentos recentes:', error);
-      throw error;
-    }
-  },
-
-  // Buscar próximos vencimentos
-  getUpcomingPayments: async (): Promise<Payment[]> => {
-    try {
-      return await apiRequest<Payment[]>('/dashboard/upcoming-payments');
-    } catch (error) {
-      console.error('Erro ao buscar próximos vencimentos:', error);
-      throw error;
-    }
-  },
-
-  // Buscar estatísticas de pagamentos
-  getPaymentStats: async (): Promise<{
-    totalRevenue: number;
-    pendingPayments: number;
-    overduePayments: number;
-    paymentRate: number;
-  }> => {
-    try {
-      return await apiRequest('/dashboard/payment-stats');
-    } catch (error) {
-      console.error('Erro ao buscar estatísticas de pagamentos:', error);
-      throw error;
-    }
-  },
-
-  // Buscar gráfico de receita mensal
-  getMonthlyRevenue: async (): Promise<{ month: string; revenue: number }[]> => {
-    try {
-      return await apiRequest<{ month: string; revenue: number }[]>('/dashboard/monthly-revenue');
-    } catch (error) {
-      console.error('Erro ao buscar dados de receita mensal:', error);
-      throw error;
-    }
-  },
-
-  // Buscar métricas de alunos
-  getStudentMetrics: async (): Promise<{
-    total: number;
-    active: number;
-    newThisMonth: number;
-    churnRate: number;
-  }> => {
-    try {
-      return await apiRequest('/dashboard/student-metrics');
-    } catch (error) {
-      console.error('Erro ao buscar métricas de alunos:', error);
-      throw error;
-    }
-  }
-};
 
 // API de Treinos
 export const workoutAPI = {
@@ -539,7 +467,6 @@ export const workoutAPI = {
     }
   },
 
-<<<<<<< HEAD
   // Obter treinos de um instrutor específico (usando ID do usuário)
   getInstructorWorkouts: async (instructorId: string): Promise<WorkoutPlan[]> => {
     try {
@@ -550,8 +477,6 @@ export const workoutAPI = {
     }
   },
 
-=======
->>>>>>> 0d414629ca48619aaaa7f2291a3a5d332df37fbf
   // Obter um treino por ID
   getWorkoutById: async (id: string): Promise<WorkoutPlan | null> => {
     try {

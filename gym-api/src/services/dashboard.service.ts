@@ -58,12 +58,8 @@ export class DashboardService {
       const activeStudents = await studentRepository
         .createQueryBuilder('student')
         .innerJoin('student.user', 'user')
-<<<<<<< HEAD
         // O banco usa a coluna `status` com valores 'active'/'inactive'
         .where('user.status = :status', { status: 'active' })
-=======
-        .where('user.isActive = :isActive', { isActive: true })
->>>>>>> 0d414629ca48619aaaa7f2291a3a5d332df37fbf
         .getCount();
       console.log('Alunos ativos encontrados:', activeStudents);
       

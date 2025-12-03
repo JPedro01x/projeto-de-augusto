@@ -8,7 +8,6 @@ import { In } from 'typeorm';
 export const getStudentWorkouts = async (req: Request, res: Response) => {
   try {
     const { studentId } = req.params;
-<<<<<<< HEAD
 
     // Aqui o frontend está enviando o ID do usuário (user.id) na URL.
     // Precisamos encontrar o Student correspondente a esse usuário
@@ -43,17 +42,6 @@ export const getStudentWorkouts = async (req: Request, res: Response) => {
       where: { studentId: student.id },
       relations: ['instructor', 'instructor.user', 'student', 'student.user'],
       order: { startDate: 'DESC' },
-=======
-    
-    console.log('Buscando treinos para studentId:', studentId);
-    
-    // Busca os treinos do aluno diretamente pela student_id na tabela workout_plans
-    const workoutPlanRepository = AppDataSource.getRepository(WorkoutPlan);
-    const workouts = await workoutPlanRepository.find({
-      where: { studentId: parseInt(studentId) },
-      relations: ['instructor', 'instructor.user', 'student', 'student.user'],
-      order: { startDate: 'DESC' }
->>>>>>> 0d414629ca48619aaaa7f2291a3a5d332df37fbf
     });
 
     console.log('Treinos encontrados:', workouts.length);
@@ -85,7 +73,6 @@ export const getStudentWorkouts = async (req: Request, res: Response) => {
   }
 };
 
-<<<<<<< HEAD
 // Listar treinos por instrutor (usado na área do instrutor)
 export const getInstructorWorkouts = async (req: Request, res: Response) => {
   try {
@@ -149,8 +136,6 @@ export const getInstructorWorkouts = async (req: Request, res: Response) => {
   }
 };
 
-=======
->>>>>>> 0d414629ca48619aaaa7f2291a3a5d332df37fbf
 export const getWorkoutById = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;

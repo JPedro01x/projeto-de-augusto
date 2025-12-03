@@ -75,11 +75,7 @@ export function AvatarUpload({ currentAvatar, onUpload, className = '' }: Avatar
 
   return (
     <div className={`relative group ${className}`}>
-<<<<<<< HEAD
-      <div className="relative w-full h-full rounded-full overflow-hidden border-2 border-gray-200 dark:border-gray-700">
-=======
       <div className="relative w-32 h-32 rounded-full overflow-hidden border-2 border-gray-200 dark:border-gray-700">
->>>>>>> 0d414629ca48619aaaa7f2291a3a5d332df37fbf
         <img
           src={imageUrl}
           alt="Foto de perfil"

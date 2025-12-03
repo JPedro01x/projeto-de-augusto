@@ -56,7 +56,6 @@ export function StudentPayments({ student, onUpdate }: StudentPaymentsProps) {
     return method ? methods[method] : 'Não informado';
   };
 
-<<<<<<< HEAD
   // Função auxiliar para exibir a "mensalidade" com base no plano do aluno
   const getMonthlyLabel = () => {
     if (!student.planType) return 'Não definido';
@@ -72,9 +71,6 @@ export function StudentPayments({ student, onUpdate }: StudentPaymentsProps) {
         return student.planType;
     }
   };
-
-=======
->>>>>>> 0d414629ca48619aaaa7f2291a3a5d332df37fbf
   // Função para lidar com a atualização do pagamento
   const handlePaymentUpdate = async () => {
     try {
@@ -117,13 +113,7 @@ export function StudentPayments({ student, onUpdate }: StudentPaymentsProps) {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-<<<<<<< HEAD
                 {getMonthlyLabel()}
-=======
-                {student.monthlyFee ? 
-                  `R$ ${student.monthlyFee.toFixed(2).replace('.', ',')}` : 
-                  'Não definido'}
->>>>>>> 0d414629ca48619aaaa7f2291a3a5d332df37fbf
               </div>
             </CardContent>
           </Card>
@@ -152,7 +142,6 @@ export function StudentPayments({ student, onUpdate }: StudentPaymentsProps) {
           studentId={student.id} 
           studentName={student.name}
           onPaymentUpdate={handlePaymentUpdate}
-<<<<<<< HEAD
           onLocalStatusChange={({ status, method, lastPaymentDate }) => {
             onUpdate({
               ...student,
@@ -161,8 +150,6 @@ export function StudentPayments({ student, onUpdate }: StudentPaymentsProps) {
               lastPaymentDate,
             });
           }}
-=======
->>>>>>> 0d414629ca48619aaaa7f2291a3a5d332df37fbf
         />
       </CardContent>
     </Card>

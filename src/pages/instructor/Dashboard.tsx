@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Users, Dumbbell, TrendingUp, Calendar } from 'lucide-react';
@@ -110,49 +109,6 @@ const InstructorDashboard = () => {
 
     loadStats();
   }, [user?.id]);
-=======
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Users, Dumbbell, TrendingUp, Calendar } from 'lucide-react';
-import { useAuth } from '@/context/AuthContext';
-
-const InstructorDashboard = () => {
-  const { user } = useAuth();
-
-  const stats = [
-    {
-      title: 'Meus Alunos',
-      value: '45',
-      change: '+3 este mês',
-      icon: Users,
-      color: 'text-primary',
-      bgColor: 'bg-primary/10',
-    },
-    {
-      title: 'Treinos Criados',
-      value: '128',
-      change: '+12 esta semana',
-      icon: Dumbbell,
-      color: 'text-secondary',
-      bgColor: 'bg-secondary/10',
-    },
-    {
-      title: 'Presença Média',
-      value: '87%',
-      change: '+5% vs mês anterior',
-      icon: TrendingUp,
-      color: 'text-accent',
-      bgColor: 'bg-accent/10',
-    },
-    {
-      title: 'Aulas Hoje',
-      value: '8',
-      change: '3 restantes',
-      icon: Calendar,
-      color: 'text-green-500',
-      bgColor: 'bg-green-500/10',
-    },
-  ];
->>>>>>> 0d414629ca48619aaaa7f2291a3a5d332df37fbf
 
   const recentStudents = [
     { name: 'João Silva', lastWorkout: 'Peito e Tríceps', progress: 85 },
