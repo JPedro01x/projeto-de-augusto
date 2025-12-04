@@ -22,7 +22,7 @@ export interface Student {
   birthDate: string;
   address: string;
   status: 'active' | 'inactive' | 'suspended';
-  planType: 'basic' | 'premium' | 'vip';
+  planType: 'basic' | 'premium' | 'vip' | 'mensal' | 'trimestral' | 'semestral' | 'anual';
   startDate: string;
   endDate: string;
   emergencyContact: string;
@@ -35,6 +35,9 @@ export interface Student {
   paymentMethod?: PaymentMethod;
   paymentHistory?: PaymentHistory[];
   monthlyFee?: number;
+  amountPaid?: number;
+  height?: number;
+  weight?: number;
   avatar?: string;
   gender?: 'male' | 'female' | 'other' | 'prefer_not_to_say';
   instructorName?: string;

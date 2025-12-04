@@ -17,16 +17,25 @@ export class User {
   password: string = '';
 
   @Column({ name: 'user_type', type: 'varchar', default: 'student' })
-  role: UserRole = 'user';
+  userType: UserRole = 'student';
 
   @Column({ name: 'status', type: 'varchar', default: 'active' })
-  isActive: boolean = true;
+  status: string = 'active';
 
   @Column({ nullable: true })
   cpf?: string;
 
   @Column({ nullable: true })
   phone?: string;
+
+  @Column({ name: 'birth_date', type: 'date', nullable: true })
+  birthDate?: Date;
+
+  @Column({ nullable: true })
+  address?: string;
+
+  @Column({ nullable: true })
+  gender?: string;
 
   @Column({ name: 'created_at', type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   createdAt: Date = new Date();

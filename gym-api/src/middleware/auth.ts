@@ -16,7 +16,7 @@ export const authenticateJWT = (req: Request, res: Response, next: NextFunction)
     jwt.verify(token, JWT_SECRET, async (err, decoded: any) => {
       if (err) {
         console.error('[AUTH] Erro ao verificar token:', err.message);
-        return res.status(403).json({ message: 'Token inválido ou expirado', error: err.message });
+        return res.status(401).json({ message: 'Token inválido ou expirado', error: err.message });
       }
 
       try {
@@ -24,7 +24,7 @@ export const authenticateJWT = (req: Request, res: Response, next: NextFunction)
         // O payload pode vir como { user: { id, role } } ou { userId, userType }
         const userId = decoded?.user?.id || decoded?.userId;
         console.log('[AUTH] UserID extraído:', userId);
-        
+
         if (!userId) {
           console.error('[AUTH] ID do usuário não encontrado no token');
           return res.status(401).json({ message: 'Token inválido: ID do usuário não encontrado' });
@@ -32,7 +32,7 @@ export const authenticateJWT = (req: Request, res: Response, next: NextFunction)
 
         const userRepository = AppDataSource.getRepository(User);
         const userData = await userRepository.findOne({ where: { id: userId } });
-        
+
         if (!userData) {
           console.error('[AUTH] Usuário não encontrado no DB:', userId);
           return res.status(401).json({ message: 'Usuário não encontrado' });
@@ -52,10 +52,4 @@ export const authenticateJWT = (req: Request, res: Response, next: NextFunction)
   }
 };
 
-declare global {
-  namespace Express {
-    interface Request {
-      user?: User;
-    }
-  }
-}
+

@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/select';
 import { DollarSign, TrendingUp, TrendingDown, Clock, CheckCircle, XCircle, Search, Loader2, User, Send, Calendar, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { financeAPI, studentAPI } from '@/services/api';
+import { financeAPI, studentAPI, apiRequest } from '@/services/api';
 import { Payment, FinancialSummary, Student } from '@/types';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
@@ -30,7 +30,7 @@ const Financial = () => {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [students, setStudents] = useState<StudentWithPaymentInfo[]>([]);
   const [selectedStudent, setSelectedStudent] = useState<string>('all');
-  
+
   // Estados para o diálogo de cobrança
   const [isSendingRequest, setIsSendingRequest] = useState(false);
   const [isRequestDialogOpen, setIsRequestDialogOpen] = useState(false);
@@ -42,7 +42,7 @@ const Financial = () => {
   // Função para enviar cobrança
   const handleSendPaymentRequest = async () => {
     if (!selectedStudentForRequest || !amount) return;
-    
+
     // Verifica se o aluno já tem pagamentos pendentes
     if (selectedStudentForRequest.paymentStatus === 'pending') {
       toast({
@@ -52,7 +52,7 @@ const Financial = () => {
       });
       return;
     }
-    
+
     try {
       setIsSendingRequest(true);
       const response = await financeAPI.sendPaymentRequest(
@@ -61,7 +61,7 @@ const Financial = () => {
         dueDate,
         description
       );
-      
+
       if (response.success) {
         toast({
           title: 'Sucesso',
@@ -83,21 +83,45 @@ const Financial = () => {
     }
   };
 
+  const handleCheckOverdue = async () => {
+    try {
+      setIsLoading(true);
+      // const result = await studentAPI.checkOverdue();
+      const result = await apiRequest<{ message: string; processed: number }>('/students/check-overdue', {
+        method: 'POST',
+      });
+      toast({
+        title: 'Verificação concluída',
+        description: `${result.processed} pagamentos verificados e atualizados.`,
+      });
+      fetchFinancialData();
+    } catch (error) {
+      console.error('Erro ao verificar atrasos:', error);
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível verificar atrasos.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Função para carregar os dados financeiros
   const fetchFinancialData = async () => {
     try {
       setIsLoading(true);
       // Primeiro buscamos o resumo financeiro
       const summary = await financeAPI.getFinancialSummary();
-      
+
       // Depois buscamos os pagamentos com filtro de aluno, se houver
       const filters: any = {};
       if (selectedStudent && selectedStudent !== 'all') {
         filters.studentId = selectedStudent;
       }
-      
+
       const payments = await financeAPI.listPayments(filters);
-      
+
       setFinancialData(summary);
       setPayments(payments);
     } catch (error) {
@@ -132,18 +156,18 @@ const Financial = () => {
         setIsLoadingStudents(true);
         // Carrega a lista de alunos
         const studentsList = await studentAPI.list();
-        
+
         // Para cada aluno, verifica o status de pagamento mais recente
         const studentsWithPaymentInfo = await Promise.all(studentsList.map(async (student) => {
           try {
             // Busca o último pagamento do aluno
             const payments = await financeAPI.listPayments({ studentId: student.id, status: 'pending' });
             const hasPendingPayments = payments.length > 0;
-            
+
             // Define o plano e valor da mensalidade
             let planType = student.planType ? String(student.planType) : 'Não definido';
             let monthlyFee = student.monthlyFee || 0;
-            
+
             // Se não tiver mensalidade definida, define um valor padrão baseado no plano
             if (!monthlyFee) {
               const planName = planType.toLowerCase();
@@ -161,12 +185,12 @@ const Financial = () => {
                 planType = 'Personalizado';
               }
             }
-            
+
             // Garante que o status de pagamento seja um dos valores esperados
-            const paymentStatus = hasPendingPayments 
-              ? 'pending' 
+            const paymentStatus = hasPendingPayments
+              ? 'pending'
               : (student.paymentStatus === 'overdue' ? 'overdue' : 'paid');
-              
+
             return {
               ...student,
               monthlyFee,
@@ -186,7 +210,7 @@ const Financial = () => {
             } as StudentWithPaymentInfo;
           }
         }));
-        
+
         setStudents(studentsWithPaymentInfo);
       } catch (error) {
         console.error('Erro ao carregar alunos:', error);
@@ -208,20 +232,20 @@ const Financial = () => {
     const fetchFinancialData = async () => {
       try {
         setIsLoading(true);
-        
+
         // Buscar pagamentos com filtro de aluno, se selecionado
         const filters: any = {};
         if (selectedStudent !== 'all') {
           filters.studentId = selectedStudent;
         }
-        
+
         const [summary, payments] = await Promise.all([
           financeAPI.getFinancialSummary(),
           financeAPI.listPayments(filters)
         ]);
-        
+
         setFinancialData(summary);
-        
+
         // Mapear pagamentos para incluir nome do aluno
         const paymentsWithStudentNames = payments.map(payment => ({
           ...payment,
@@ -229,7 +253,7 @@ const Financial = () => {
           paymentMethod: payment.paymentMethod || 'cash',
           paymentDate: payment.paymentDate
         }));
-        
+
         setPayments(paymentsWithStudentNames);
       } catch (error) {
         console.error('Erro ao carregar dados financeiros:', error);
@@ -248,11 +272,11 @@ const Financial = () => {
 
   const filteredPayments = payments.filter(payment => {
     const searchLower = searchTerm.toLowerCase();
-    const matchesSearch = 
+    const matchesSearch =
       (payment.studentName?.toLowerCase().includes(searchLower) ||
-       (payment.id && payment.id.toString().toLowerCase().includes(searchLower)) ||
-       (payment.planType && payment.planType.toLowerCase().includes(searchLower)));
-       
+        (payment.id && payment.id.toString().toLowerCase().includes(searchLower)) ||
+        (payment.planType && payment.planType.toLowerCase().includes(searchLower)));
+
     const matchesStatus = filterStatus === 'all' || payment.status === filterStatus;
     return matchesSearch && matchesStatus;
   });
@@ -273,29 +297,29 @@ const Financial = () => {
     try {
       setIsLoading(true);
       // Atualiza o status do pagamento para pago e define a data de pagamento
-      await financeAPI.updatePayment(id, { 
-        status: 'paid', 
+      await financeAPI.updatePayment(id, {
+        status: 'paid',
         paidDate: new Date().toISOString(),
         paymentDate: new Date().toISOString()
       } as any); // Usando 'as any' temporariamente para evitar erros de tipagem
-      
+
       // Atualiza o estado local com o pagamento atualizado
       setPayments(payments.map(p =>
         p.id === id
-          ? { 
-              ...p, 
-              status: 'paid', 
-              paidDate: new Date().toISOString(),
-              paymentDate: new Date().toISOString(),
-              paymentMethod: p.paymentMethod || 'Dinheiro' // Valor padrão para o método de pagamento
-            }
+          ? {
+            ...p,
+            status: 'paid',
+            paidDate: new Date().toISOString(),
+            paymentDate: new Date().toISOString(),
+            paymentMethod: p.paymentMethod || 'Dinheiro' // Valor padrão para o método de pagamento
+          }
           : p
       ));
-      
+
       // Atualiza o resumo financeiro
       const updatedSummary = await financeAPI.getFinancialSummary();
       setFinancialData(updatedSummary);
-      
+
       toast({
         title: 'Pagamento confirmado!',
         description: 'O pagamento foi registrado com sucesso.',
@@ -312,7 +336,7 @@ const Financial = () => {
 
   const getStatusColor = (status: string | undefined) => {
     if (!status) return 'bg-muted text-muted-foreground';
-    
+
     switch (status.toLowerCase()) {
       case 'paid':
         return 'bg-green-500/20 text-green-500';
@@ -331,7 +355,7 @@ const Financial = () => {
 
   const getStatusLabel = (status: string | undefined) => {
     if (!status) return 'Desconhecido';
-    
+
     switch (status.toLowerCase()) {
       case 'paid':
         return 'Pago';
@@ -358,15 +382,15 @@ const Financial = () => {
 
   const formatDate = (dateString: string | Date | undefined | null): string => {
     if (!dateString) return 'Data não informada';
-    
+
     try {
       const date = typeof dateString === 'string' ? new Date(dateString) : dateString;
-      
+
       // Verifica se a data é válida
       if (isNaN(date.getTime())) {
         return 'Data inválida';
       }
-      
+
       return format(date, 'dd/MM/yyyy', { locale: ptBR });
     } catch (error) {
       console.error('Erro ao formatar data:', error);
@@ -376,9 +400,15 @@ const Financial = () => {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-4xl font-bold text-gradient">Financeiro</h1>
-        <p className="text-muted-foreground mt-1">Controle de pagamentos e receitas</p>
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-4xl font-bold text-gradient">Financeiro</h1>
+          <p className="text-muted-foreground mt-1">Controle de pagamentos e receitas</p>
+        </div>
+        <Button onClick={handleCheckOverdue} disabled={isLoading} variant="outline">
+          <Clock className="mr-2 h-4 w-4" />
+          Verificar Atrasos
+        </Button>
       </div>
 
       {/* Stats */}
@@ -460,8 +490,8 @@ const Financial = () => {
             {/* Student Selection */}
             <div className="relative">
               <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Select 
-                value={selectedStudent} 
+              <Select
+                value={selectedStudent}
                 onValueChange={(value) => {
                   setSelectedStudent(value);
                   // Definir o aluno selecionado para o diálogo de cobrança
@@ -499,12 +529,12 @@ const Financial = () => {
                 </SelectContent>
               </Select>
             </div>
-            
+
             {/* Botão de enviar cobrança */}
             <Dialog open={isRequestDialogOpen} onOpenChange={setIsRequestDialogOpen}>
               <DialogTrigger asChild>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   className="w-full sm:w-auto"
                   disabled={!selectedStudent || selectedStudent === 'all' || isLoadingStudents}
                 >
@@ -519,7 +549,7 @@ const Financial = () => {
                     Envie uma cobrança para o aluno selecionado.
                   </DialogDescription>
                 </DialogHeader>
-                
+
                 <div className="grid gap-4 py-4">
                   <div className="grid grid-cols-4 items-center gap-4">
                     <Label htmlFor="student" className="text-right">
@@ -537,7 +567,7 @@ const Financial = () => {
                       )}
                     </div>
                   </div>
-                  
+
                   <div className="grid grid-cols-4 items-center gap-4">
                     <Label htmlFor="amount" className="text-right">
                       Valor
@@ -560,10 +590,10 @@ const Financial = () => {
                         {selectedStudentForRequest?.monthlyFee && selectedStudentForRequest.monthlyFee > 0 ? (
                           <div className="flex items-center text-sm text-muted-foreground">
                             <span>Mensalidade do plano: R$ {selectedStudentForRequest.monthlyFee.toFixed(2)}</span>
-                            <Button 
-                              type="button" 
-                              variant="ghost" 
-                              size="sm" 
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
                               className="h-6 px-2 ml-2 text-xs"
                               onClick={() => setAmount(selectedStudentForRequest.monthlyFee?.toString() || '')}
                             >
@@ -584,7 +614,7 @@ const Financial = () => {
                       </div>
                     </div>
                   </div>
-                  
+
                   <div className="grid grid-cols-4 items-center gap-4">
                     <Label htmlFor="dueDate" className="text-right">
                       Vencimento
@@ -601,7 +631,7 @@ const Financial = () => {
                       />
                     </div>
                   </div>
-                  
+
                   <div className="grid grid-cols-4 items-start gap-4">
                     <Label htmlFor="description" className="text-right mt-2">
                       Descrição
@@ -620,16 +650,16 @@ const Financial = () => {
                     </div>
                   </div>
                 </div>
-                
+
                 <DialogFooter>
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     onClick={() => setIsRequestDialogOpen(false)}
                     disabled={isSendingRequest}
                   >
                     Cancelar
                   </Button>
-                  <Button 
+                  <Button
                     onClick={handleSendPaymentRequest}
                     disabled={!amount || isSendingRequest}
                   >
@@ -663,8 +693,8 @@ const Financial = () => {
 
             {/* Status Filter */}
             <div>
-              <Select 
-                value={filterStatus} 
+              <Select
+                value={filterStatus}
                 onValueChange={setFilterStatus}
                 disabled={isLoading}
               >
@@ -737,7 +767,7 @@ const Financial = () => {
                         {getStatusLabel(payment.status || 'pending')}
                       </span>
                     </div>
-                    
+
                     {payment.status !== 'paid' && (
                       <Button
                         variant="gradient"
@@ -783,7 +813,7 @@ const Financial = () => {
                 // Encontrar o valor máximo para calcular a porcentagem relativa
                 const maxRevenue = Math.max(...financialData.monthlyRevenue.map(mr => mr.revenue), 1);
                 const percentage = (revenue / maxRevenue) * 100;
-                
+
                 return (
                   <div key={month} className="space-y-2">
                     <div className="flex items-center justify-between text-sm">

@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { fetchWithAuth, getAuthStorage } from '@/utils/http';
 
 export type UserRole = 'admin' | 'instructor' | 'student';
 
@@ -17,6 +18,7 @@ interface AuthContextType {
   login: (email: string, password: string, rememberMe?: boolean) => Promise<boolean>;
   logout: () => void;
   isAuthenticated: boolean;
+  isLoading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -25,42 +27,134 @@ const API_BASE = '/api'; // Usando o prefixo /api para todas as requisições
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    // Check for stored user on mount (first check localStorage, then sessionStorage)
-    const storedUser = localStorage.getItem('user') || sessionStorage.getItem('user');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
+  // Função para fazer logout
+  const logout = useCallback(() => {
+    setUser(null);
+    // Limpar ambos os armazenamentos ao fazer logout
+    localStorage.removeItem('user');
+    localStorage.removeItem('token');
+    sessionStorage.removeItem('user');
+    sessionStorage.removeItem('token');
+
+    // Disparar evento de logout
+    window.dispatchEvent(new Event('auth-state-changed'));
+
+    // Navegar para a página de login
+    navigate('/login', { replace: true });
+  }, [navigate]);
+
+  // Função para verificar a autenticação
+  const checkAuth = useCallback(() => {
+    try {
+      const storage = getAuthStorage();
+      const storedUser = storage.getItem('user');
+      const token = storage.getItem('token');
+
+      if (storedUser && token) {
+        console.log('Usuário encontrado no armazenamento');
+        const parsedUser = JSON.parse(storedUser);
+        setUser(parsedUser);
+        return true;
+      } else {
+        console.log('Nenhum usuário autenticado encontrado');
+        setUser(null);
+        return false;
+      }
+    } catch (error) {
+      console.error('Erro ao carregar usuário do armazenamento:', error);
+      setUser(null);
+      return false;
+    } finally {
+      setIsLoading(false);
     }
   }, []);
+
+  // Função para verificar a sessão
+  const checkSession = useCallback(async () => {
+    try {
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+      if (!token) {
+        console.log('Nenhum token encontrado, deslogando...');
+        logout();
+        return;
+      }
+
+      const response = await fetch('http://localhost:3000/api/auth/check-session', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        console.log('Sessão inválida, fazendo logout...');
+        logout();
+      }
+    } catch (error) {
+      console.error('Erro ao verificar sessão:', error);
+      logout();
+    }
+  }, [logout]);
+
+  // Efeito para verificar autenticação inicial e configurar listeners
+  useEffect(() => {
+    // Verificar autenticação inicial
+    checkAuth();
+
+    // Função para lidar com mudanças de autenticação
+    const handleAuthChange = () => {
+      console.log('Evento de mudança de autenticação detectado');
+      checkAuth();
+    };
+
+    // Adicionar listener para eventos de mudança de autenticação
+    window.addEventListener('auth-state-changed', handleAuthChange);
+    window.addEventListener('storage', handleAuthChange);
+
+    // Verificar na montagem
+    checkSession();
+
+    // Verificar a cada 5 minutos
+    const sessionCheckInterval = setInterval(checkSession, 5 * 60 * 1000);
+
+    // Limpar listeners e intervalo ao desmontar
+    return () => {
+      window.removeEventListener('auth-state-changed', handleAuthChange);
+      window.removeEventListener('storage', handleAuthChange);
+      clearInterval(sessionCheckInterval);
+    };
+  }, [checkAuth, checkSession]);
 
   const login = async (email: string, password: string, rememberMe: boolean = false): Promise<boolean> => {
     try {
       console.log('Tentando fazer login com:', { email });
-      
+
       // Verificar se o backend está acessível
       try {
-        const healthResponse = await fetch('http://localhost:3000/api/health', {
+        const healthResponse = await fetchWithAuth('http://localhost:3000/api/health', {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
             'Accept': 'application/json'
-          },
-          credentials: 'include'
+          }
         });
-        
+
         if (!healthResponse.ok) {
           throw new Error(`Erro no health check: ${healthResponse.status} ${healthResponse.statusText}`);
         }
-        
+
         const healthData = await healthResponse.json();
         console.log('Health check:', healthData);
       } catch (healthError) {
         console.error('Erro ao conectar ao backend:', healthError);
         throw new Error('Não foi possível conectar ao servidor. Verifique se o backend está rodando corretamente na porta 3000.');
       }
-      
+
+      // Fazer a requisição de login
       const response = await fetch('http://localhost:3000/api/auth/login', {
         method: 'POST',
         headers: {
@@ -69,7 +163,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           'Cache': 'no-cache'
         },
         body: JSON.stringify({ email, password }),
-        credentials: 'include', // Importante para enviar cookies
+        credentials: 'include',
         mode: 'cors'
       });
 
@@ -77,7 +171,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         status: response.status,
         statusText: response.statusText
       });
-      
+
       if (!response.ok) {
         let errorData;
         try {
@@ -93,7 +187,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       const data = await response.json();
       const { token, user: userData } = data;
-      
+
       // Mapear o usuário para o formato esperado
       console.log('Dados recebidos do servidor:', data);
       console.log('Token recebido:', token);
@@ -115,40 +209,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const storage = rememberMe ? localStorage : sessionStorage;
       storage.setItem('token', token);
       storage.setItem('user', JSON.stringify(mappedUser));
-      
-      // Definir o usuário no estado
+
+      // Atualizar o estado do usuário
       setUser(mappedUser);
 
+      // Disparar evento de login bem-sucedido
+      window.dispatchEvent(new Event('auth-state-changed'));
+
       // Navegar com base na função do usuário com pequeno atraso para garantir a atualização do estado
-      setTimeout(() => {
-        console.log('Redirecionando usuário com função:', mappedUser.role);
-        if (mappedUser.role === 'admin') {
-          console.log('Redirecionando para /admin');
-          navigate('/admin');
-        } else if (mappedUser.role === 'instructor') {
-          console.log('Redirecionando para /instructor/dashboard');
-          navigate('/instructor/dashboard');
-        } else {
-          console.log('Redirecionando para /student/dashboard');
-          navigate('/student/dashboard');
-        }
-      }, 100);
-      
+      const redirectPath = mappedUser.role === 'admin'
+        ? '/admin'
+        : mappedUser.role === 'instructor'
+          ? '/instructor/dashboard'
+          : '/student/dashboard';
+
+      console.log(`Redirecionando usuário ${mappedUser.role} para:`, redirectPath);
+      navigate(redirectPath, { replace: true });
+
       return true;
     } catch (e) {
       return false;
     }
   };
 
-  const logout = () => {
-    setUser(null);
-    // Clear both localStorage and sessionStorage on logout
-    localStorage.removeItem('user');
-    localStorage.removeItem('token');
-    sessionStorage.removeItem('user');
-    sessionStorage.removeItem('token');
-    navigate('/login');
-  };
 
   return (
     <AuthContext.Provider
@@ -157,6 +240,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         login,
         logout,
         isAuthenticated: !!user,
+        isLoading,
       }}
     >
       {children}

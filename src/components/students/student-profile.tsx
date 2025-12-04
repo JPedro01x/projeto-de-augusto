@@ -6,6 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { AvatarUpload } from '@/components/ui/avatar-upload';
 import { fileService } from '@/services/fileService';
 import { studentAPI } from '@/services/api';
+import { useStudents } from '@/hooks/use-students';
+import { useToast } from '@/components/ui/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Edit, Save, X, Loader2, DollarSign } from 'lucide-react';
@@ -29,6 +31,9 @@ export function StudentProfile({ student, isAdmin = false }: StudentProfileProps
   const [formData, setFormData] = useState<Partial<Student>>({});
   const [isLoading, setIsLoading] = useState(false);
 
+  const { toast } = useToast();
+  const { updateStudent } = useStudents();
+
   // Atualiza o formulário quando o aluno é carregado
   useEffect(() => {
     if (student) {
@@ -45,6 +50,8 @@ export function StudentProfile({ student, isAdmin = false }: StudentProfileProps
         medicalConditions: student.medicalConditions || '',
         planType: student.planType || 'basic',
         gender: student.gender || 'prefer_not_to_say',
+        height: (student.height?.toString() || '') as any,
+        weight: (student.weight?.toString() || '') as any,
       });
     }
   }, [student]);
@@ -66,42 +73,51 @@ export function StudentProfile({ student, isAdmin = false }: StudentProfileProps
 
   const handleSaveChanges = async () => {
     if (!currentStudent) return;
-    
+
     try {
       setIsLoading(true);
-      const updatedStudent = await studentAPI.update(currentStudent.id, formData);
-      if (updatedStudent) {
-        setCurrentStudent(updatedStudent);
-        setIsEditing(false);
-      }
+
+      // Converte altura e peso para número se necessário, ou undefined se string vazia
+      const dataToSave = {
+        ...formData,
+        height: formData.height ? parseFloat(formData.height.toString()) : undefined,
+        weight: formData.weight ? parseFloat(formData.weight.toString()) : undefined,
+      };
+
+      await updateStudent.mutateAsync({
+        id: currentStudent.id,
+        data: dataToSave
+      });
+
+      // O hook useStudents já exibe o toast de sucesso e invalida a query
+      // A atualização do estado local acontecerá via useEffect quando os novos dados chegarem via props
+      setIsEditing(false);
     } catch (error) {
       console.error('Erro ao atualizar perfil:', error);
+      // O hook useStudents já exibe o toast de erro
     } finally {
       setIsLoading(false);
     }
   };
 
+
   const handleAvatarUpload = async (file: File) => {
     if (!currentStudent) return;
-    
+
     try {
       setIsUpdating(true);
-      
+
       // Fazer upload do novo avatar
       const { url } = await fileService.uploadFile(file, 'avatars');
-      
-      // Atualizar o avatar do aluno na API
-      const updatedStudent = await studentAPI.update(currentStudent.id, { 
-        ...currentStudent,
-        avatar: url 
+
+      // Atualizar o avatar do aluno usando o hook useStudents
+      await updateStudent.mutateAsync({
+        id: currentStudent.id,
+        data: { avatar: url }
       });
-      
-      if (updatedStudent) {
-        setCurrentStudent(updatedStudent);
-      }
+
     } catch (error) {
       console.error('Erro ao atualizar o avatar:', error);
-      throw error;
     } finally {
       setIsUpdating(false);
     }
@@ -114,8 +130,8 @@ export function StudentProfile({ student, isAdmin = false }: StudentProfileProps
         return (
           <div className="space-y-2">
             <Label htmlFor={fieldName}>{label}</Label>
-            <Select 
-              value={formData[fieldName] as string || ''} 
+            <Select
+              value={formData[fieldName] as string || ''}
               onValueChange={(value) => handleSelectChange(fieldName, value)}
             >
               <SelectTrigger>
@@ -134,8 +150,8 @@ export function StudentProfile({ student, isAdmin = false }: StudentProfileProps
         return (
           <div className="space-y-2">
             <Label htmlFor={fieldName}>{label}</Label>
-            <Select 
-              value={formData[fieldName] as string || ''} 
+            <Select
+              value={formData[fieldName] as string || ''}
               onValueChange={(value) => handleSelectChange(fieldName, value)}
             >
               <SelectTrigger>
@@ -172,7 +188,8 @@ export function StudentProfile({ student, isAdmin = false }: StudentProfileProps
               value={formData[fieldName] as string || ''}
               onChange={handleInputChange}
               placeholder={`Digite ${label.toLowerCase()}`}
-              type={fieldName === 'birthDate' ? 'date' : 'text'}
+              type={fieldName === 'birthDate' ? 'date' : (fieldName === 'height' || fieldName === 'weight') ? 'number' : 'text'}
+              step={fieldName === 'height' || fieldName === 'weight' ? '0.01' : undefined}
             />
           </div>
         );
@@ -235,7 +252,7 @@ export function StudentProfile({ student, isAdmin = false }: StudentProfileProps
                     ) : (
                       // Avatar com upload para o próprio aluno
                       <>
-                        <AvatarUpload 
+                        <AvatarUpload
                           currentAvatar={currentStudent.avatar ? fileService.getFileUrl(currentStudent.avatar) : ''}
                           onUpload={handleAvatarUpload}
                           className="w-16 h-16"
@@ -284,17 +301,17 @@ export function StudentProfile({ student, isAdmin = false }: StudentProfileProps
                 <div>
                   {isEditing ? (
                     <div className="flex gap-2">
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
+                      <Button
+                        variant="outline"
+                        size="sm"
                         onClick={() => setIsEditing(false)}
                         disabled={isLoading}
                       >
                         <X className="h-4 w-4 mr-2" />
                         Cancelar
                       </Button>
-                      <Button 
-                        size="sm" 
+                      <Button
+                        size="sm"
                         onClick={handleSaveChanges}
                         disabled={isLoading}
                       >
@@ -307,9 +324,9 @@ export function StudentProfile({ student, isAdmin = false }: StudentProfileProps
                       </Button>
                     </div>
                   ) : (
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
+                    <Button
+                      variant="outline"
+                      size="sm"
                       onClick={() => setIsEditing(true)}
                     >
                       <Edit className="h-4 w-4 mr-2" />
@@ -323,29 +340,31 @@ export function StudentProfile({ student, isAdmin = false }: StudentProfileProps
               {renderField('CPF', currentStudent.cpf, 'cpf')}
               {renderField('Telefone', currentStudent.phone, 'phone')}
               {renderField('Data de Nascimento', currentStudent.birthDate ? format(new Date(currentStudent.birthDate), 'dd/MM/yyyy', { locale: ptBR }) : '', 'birthDate')}
-              {renderField('Gênero', 
-                currentStudent.gender === 'male' ? 'Masculino' : 
-                currentStudent.gender === 'female' ? 'Feminino' : 
-                currentStudent.gender === 'other' ? 'Outro' : 
-                'Prefiro não informar', 
+              {renderField('Gênero',
+                currentStudent.gender === 'male' ? 'Masculino' :
+                  currentStudent.gender === 'female' ? 'Feminino' :
+                    currentStudent.gender === 'other' ? 'Outro' :
+                      'Prefiro não informar',
                 'gender'
               )}
               {renderField('Endereço', currentStudent.address, 'address')}
               {renderField('Contato de Emergência', currentStudent.emergencyContact, 'emergencyContact')}
               {renderField('Telefone de Emergência', currentStudent.emergencyContactPhone, 'emergencyContactPhone')}
-              {renderField('Plano', 
-                currentStudent.planType === 'basic' ? 'Básico' : 
-                currentStudent.planType === 'premium' ? 'Premium' : 
-                currentStudent.planType === 'vip' ? 'VIP' : 
-                'Não definido', 
+              {renderField('Plano',
+                currentStudent.planType === 'basic' ? 'Básico' :
+                  currentStudent.planType === 'premium' ? 'Premium' :
+                    currentStudent.planType === 'vip' ? 'VIP' :
+                      'Não definido',
                 'planType'
               )}
-              {renderField('Status', 
-                currentStudent.status === 'active' ? 'Ativo' : 
-                currentStudent.status === 'inactive' ? 'Inativo' : 
-                'Suspenso', 
+              {renderField('Status',
+                currentStudent.status === 'active' ? 'Ativo' :
+                  currentStudent.status === 'inactive' ? 'Inativo' :
+                    'Suspenso',
                 'status'
               )}
+              {renderField('Altura', currentStudent.height ? `${currentStudent.height} m` : '', 'height')}
+              {renderField('Peso', currentStudent.weight ? `${currentStudent.weight} kg` : '', 'weight')}
               {currentStudent.startDate && (
                 <div className="space-y-2">
                   <p className="text-sm text-muted-foreground">Data de Início</p>
@@ -379,9 +398,9 @@ export function StudentProfile({ student, isAdmin = false }: StudentProfileProps
 
         <TabsContent value="payments">
           {currentStudent && (
-            <StudentPayments 
-              student={currentStudent} 
-              onUpdate={handleStudentUpdate} 
+            <StudentPayments
+              student={currentStudent}
+              onUpdate={handleStudentUpdate}
             />
           )}
         </TabsContent>

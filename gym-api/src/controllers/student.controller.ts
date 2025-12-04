@@ -2,7 +2,66 @@ import { Request, Response } from 'express';
 import { AppDataSource } from '../config/database';
 import { User } from '../entities/User';
 import { Student } from '../entities/Student';
+import { Notification } from '../entities/Notification';
 import bcrypt from 'bcryptjs';
+
+const PLAN_PRICES: Record<string, number> = {
+  mensal: 99.9,
+  trimestral: 279.9,
+  semestral: 539.9,
+  anual: 999.9,
+  basic: 99.9,
+  premium: 149.9,
+  vip: 199.9
+};
+
+export const checkOverduePayments = async (req: Request, res: Response) => {
+  try {
+    const studentRepo = AppDataSource.getRepository(Student);
+    const notificationRepo = AppDataSource.getRepository(Notification);
+
+    const today = new Date();
+
+    // Buscar alunos com pagamentos vencidos (nextPaymentDate <= hoje) e status 'paid'
+    const overdueStudents = await studentRepo.createQueryBuilder('student')
+      .leftJoinAndSelect('student.user', 'user')
+      .where('student.nextPaymentDate <= :today', { today })
+      .andWhere('student.paymentStatus = :status', { status: 'paid' })
+      .getMany();
+
+    let processedCount = 0;
+
+    for (const student of overdueStudents) {
+      // Atualizar status para overdue
+      student.paymentStatus = 'overdue';
+      await studentRepo.save(student);
+
+      // Criar notificação
+      // Criar notificação
+      const planType = student.planType?.toLowerCase() || 'basic';
+      const planPrice = PLAN_PRICES[planType] || 0;
+      const formattedPrice = planPrice.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+      const notification = new Notification();
+      notification.title = 'Pagamento em Atraso';
+      notification.message = `O plano ${student.planType} de ${student.user.name} venceu. Valor em aberto: ${formattedPrice}`;
+      notification.type = 'payment';
+      notification.userId = student.user.id;
+      notification.relatedId = student.userId; // PK do student é userId
+
+      await notificationRepo.save(notification);
+      processedCount++;
+    }
+
+    return res.json({
+      message: 'Verificação de pagamentos atrasados concluída',
+      processed: processedCount
+    });
+  } catch (error) {
+    console.error('Erro ao verificar pagamentos atrasados:', error);
+    return res.status(500).json({ message: 'Erro ao verificar pagamentos atrasados' });
+  }
+};
 
 export const createStudent = async (req: Request, res: Response) => {
   try {
@@ -21,24 +80,24 @@ export const createStudent = async (req: Request, res: Response) => {
     const user = new User();
     user.name = name;
     user.email = email;
-    user.passwordHash = passwordHash;
+    user.password = passwordHash;
     user.cpf = cpf;
     user.phone = phone;
     user.birthDate = birthDate;
     user.address = address;
     user.userType = 'student';
     user.status = 'active';
-    
+
     const savedUser = await userRepo.save(user);
-    
+
     // Criar e salvar o estudante
     const student = new Student();
     student.user = savedUser;
     student.emergencyContactName = emergencyContactName;
     student.emergencyContactPhone = emergencyContactPhone;
-    
+
     await studentRepo.save(student);
-    
+
     return res.status(201).json({ id: savedUser.id });
   } catch (e) {
     console.error(e);
@@ -49,7 +108,7 @@ export const createStudent = async (req: Request, res: Response) => {
 export const listStudents = async (req: Request, res: Response) => {
   try {
     const { instructorId } = req.query;
-    
+
     let query = `
       SELECT DISTINCT
         u.id,
@@ -118,7 +177,7 @@ export const listStudents = async (req: Request, res: Response) => {
       assignedInstructor: '',
       instructorName: 'Não atribuído',
       updatedAt: s.updatedAt?.toISOString?.() || new Date().toISOString(),
-      age: s.birthDate ? 
+      age: s.birthDate ?
         (new Date().getFullYear() - new Date(s.birthDate).getFullYear()) : null
     }));
 
@@ -126,7 +185,7 @@ export const listStudents = async (req: Request, res: Response) => {
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
     console.error('Erro ao listar alunos:', error);
-    return res.status(500).json({ 
+    return res.status(500).json({
       message: 'Erro ao listar alunos',
       error: errorMessage,
       stack: process.env.NODE_ENV === 'development' ? (error as Error).stack : undefined
@@ -149,7 +208,7 @@ export const debugStudentsWithInstructors = async (_req: Request, res: Response)
       .orderBy('u.name', 'ASC');
 
     const results = await query.getRawMany();
-    
+
     return res.json({
       total: results.length,
       students: results
@@ -157,7 +216,7 @@ export const debugStudentsWithInstructors = async (_req: Request, res: Response)
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
     console.error('Erro ao debugar alunos:', error);
-    return res.status(500).json({ 
+    return res.status(500).json({
       message: 'Erro ao debugar alunos',
       error: errorMessage
     });
@@ -184,6 +243,10 @@ export const updateStudent = async (req: Request, res: Response) => {
       paymentStatus,
       lastPaymentDate,
       nextPaymentDate,
+      paymentMethod,
+      amountPaid,
+      height,
+      weight,
     } = req.body;
 
     const userRepo = AppDataSource.getRepository(User);
@@ -202,7 +265,7 @@ export const updateStudent = async (req: Request, res: Response) => {
     if (status !== undefined) user.status = status;
     // Atualiza senha se enviada
     if (password !== undefined && password !== null && String(password).length > 0) {
-      user.passwordHash = await bcrypt.hash(String(password), 10);
+      user.password = await bcrypt.hash(String(password), 10);
     }
     await userRepo.save(user);
 
@@ -217,8 +280,46 @@ export const updateStudent = async (req: Request, res: Response) => {
     if (startDate !== undefined) student.startDate = startDate;
     if (endDate !== undefined) student.endDate = endDate;
     if (paymentStatus !== undefined) student.paymentStatus = paymentStatus;
-    if (lastPaymentDate !== undefined) student.lastPaymentDate = lastPaymentDate;
-    if (nextPaymentDate !== undefined) student.nextPaymentDate = nextPaymentDate;
+    if (paymentMethod !== undefined) student.paymentMethod = paymentMethod;
+    if (height !== undefined) student.height = height ? parseFloat(height) : undefined;
+    if (weight !== undefined) student.weight = weight ? parseFloat(weight) : undefined;
+
+    // Se amountPaid foi enviado, atualiza lastPaymentDate e calcula nextPaymentDate
+    if (amountPaid !== undefined) {
+      student.amountPaid = parseFloat(amountPaid);
+      student.lastPaymentDate = lastPaymentDate ? new Date(lastPaymentDate) : new Date();
+
+      // Calcula a próxima data de pagamento baseada no planType
+      const currentPlanType = planType || student.planType;
+      if (currentPlanType) {
+        const nextDate = new Date(student.lastPaymentDate);
+
+        switch (currentPlanType.toLowerCase()) {
+          case 'mensal':
+            nextDate.setMonth(nextDate.getMonth() + 1);
+            break;
+          case 'trimestral':
+            nextDate.setMonth(nextDate.getMonth() + 3);
+            break;
+          case 'semestral':
+            nextDate.setMonth(nextDate.getMonth() + 6);
+            break;
+          case 'anual':
+            nextDate.setFullYear(nextDate.getFullYear() + 1);
+            break;
+          default:
+            // Se não for um dos planos conhecidos, adiciona 1 mês por padrão
+            nextDate.setMonth(nextDate.getMonth() + 1);
+        }
+
+        student.nextPaymentDate = nextDate;
+      }
+    } else {
+      // Se não foi enviado amountPaid, mas foi enviado lastPaymentDate ou nextPaymentDate
+      if (lastPaymentDate !== undefined) student.lastPaymentDate = lastPaymentDate;
+      if (nextPaymentDate !== undefined) student.nextPaymentDate = nextPaymentDate;
+    }
+
     await studentRepo.save(student);
 
     const result = await studentRepo.findOne({ where: { userId: Number(id) }, relations: { user: true } });

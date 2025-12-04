@@ -12,6 +12,16 @@ interface StudentPaymentsProps {
   onUpdate: (updatedStudent: Student) => void;
 }
 
+const PLAN_PRICES = {
+  mensal: 99.9,
+  trimestral: 279.9,
+  semestral: 539.9,
+  anual: 999.9,
+  basic: 99.9,
+  premium: 149.9,
+  vip: 199.9
+} as const;
+
 export function StudentPayments({ student, onUpdate }: StudentPaymentsProps) {
   // Função para renderizar o status de pagamento com ícone
   const renderPaymentStatus = (status: 'paid' | 'pending' | 'overdue') => {
@@ -34,7 +44,7 @@ export function StudentPayments({ student, onUpdate }: StudentPaymentsProps) {
     };
 
     const { icon, label, variant } = statusConfig[status] || statusConfig.pending;
-    
+
     return (
       <Badge variant={variant} className="inline-flex items-center">
         {icon}
@@ -52,7 +62,7 @@ export function StudentPayments({ student, onUpdate }: StudentPaymentsProps) {
       transferencia: 'Transferência',
       outro: 'Outro',
     };
-    
+
     return method ? methods[method] : 'Não informado';
   };
 
@@ -60,17 +70,41 @@ export function StudentPayments({ student, onUpdate }: StudentPaymentsProps) {
   const getMonthlyLabel = () => {
     if (!student.planType) return 'Não definido';
 
-    switch (student.planType) {
+    const planType = student.planType.toLowerCase();
+
+    // Verifica se é um dos novos planos de pagamento
+    if (planType === 'mensal') return 'Mensal - R$99,90';
+    if (planType === 'trimestral') return 'Trimestral - R$279,90';
+    if (planType === 'semestral') return 'Semestral - R$539,90';
+    if (planType === 'anual') return 'Anual - R$999,90';
+
+    // Planos antigos (basic, premium, vip)
+    switch (planType) {
       case 'basic':
-        return 'Plano Básico';
+        return 'Plano Básico - R$99,90';
       case 'premium':
-        return 'Plano Premium';
+        return 'Plano Premium - R$149,90';
       case 'vip':
-        return 'Plano VIP';
+        return 'Plano VIP - R$199,90';
       default:
         return student.planType;
     }
   };
+
+  // Função para obter o tipo de plano correto para o PaymentManager
+  const getCurrentPlan = (): 'mensal' | 'trimestral' | 'semestral' | 'anual' => {
+    const planType = student.planType?.toLowerCase();
+
+    // Se já for um dos novos planos, retorna diretamente
+    if (planType === 'mensal' || planType === 'trimestral' ||
+      planType === 'semestral' || planType === 'anual') {
+      return planType;
+    }
+
+    // Se for um plano antigo, converte para mensal por padrão
+    return 'mensal';
+  };
+
   // Função para lidar com a atualização do pagamento
   const handlePaymentUpdate = async () => {
     try {
@@ -94,60 +128,22 @@ export function StudentPayments({ student, onUpdate }: StudentPaymentsProps) {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* Resumo do pagamento */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Status Atual</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {renderPaymentStatus(student.paymentStatus)}
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Mensalidade</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {getMonthlyLabel()}
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Último Pagamento</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-sm">
-                {student.lastPaymentDate ? 
-                  format(new Date(student.lastPaymentDate), 'dd/MM/yyyy', { locale: ptBR }) : 
-                  'Nenhum registro'}
-              </div>
-              {student.paymentMethod && (
-                <div className="text-xs text-muted-foreground">
-                  {formatPaymentMethod(student.paymentMethod)}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-
         {/* Gerenciador de Pagamentos */}
-        <PaymentManager 
-          studentId={student.id} 
+        <PaymentManager
+          studentId={student.id}
           studentName={student.name}
+          currentPlan={getCurrentPlan()}
+          currentStatus={student.paymentStatus}
+          lastPaymentDate={student.lastPaymentDate}
           onPaymentUpdate={handlePaymentUpdate}
-          onLocalStatusChange={({ status, method, lastPaymentDate }) => {
+          onLocalStatusChange={({ status, method, lastPaymentDate, planType, amount }) => {
             onUpdate({
               ...student,
               paymentStatus: status,
               paymentMethod: method,
               lastPaymentDate,
+              planType,
+              amountPaid: amount,
             });
           }}
         />

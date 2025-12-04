@@ -1,94 +1,139 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
-import { CheckCircle, Clock, Send, XCircle } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { useStudents } from '@/hooks/use-students';
+import { CheckCircle, Clock, XCircle, Calendar, DollarSign } from 'lucide-react';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
+type PlanType = 'mensal' | 'trimestral' | 'semestral' | 'anual';
 type PaymentMethod = 'pix' | 'dinheiro' | 'cartao' | 'transferencia';
 type PaymentStatus = 'pending' | 'paid' | 'overdue';
+
+const PLAN_PRICES = {
+  mensal: 99.9,
+  trimestral: 279.9,
+  semestral: 539.9,
+  anual: 999.9
+} as const;
+
+const PLAN_LABELS = {
+  mensal: 'Mensal - R$99,90',
+  trimestral: 'Trimestral - R$279,90',
+  semestral: 'Semestral - R$539,90',
+  anual: 'Anual - R$999,90'
+} as const;
 
 interface PaymentManagerProps {
   studentId: string;
   studentName: string;
+  currentPlan?: PlanType;
+  currentStatus?: PaymentStatus;
+  lastPaymentDate?: string;
   onPaymentUpdate: () => void;
-  onLocalStatusChange?: (params: { status: PaymentStatus; method: PaymentMethod; lastPaymentDate: string }) => void;
+  onLocalStatusChange: (params: {
+    status: PaymentStatus;
+    method: PaymentMethod;
+    lastPaymentDate: string;
+    planType: PlanType;
+    amount: number;
+  }) => void;
 }
 
-export function PaymentManager({ studentId, studentName, onPaymentUpdate, onLocalStatusChange }: PaymentManagerProps) {
+export function PaymentManager({
+  studentId,
+  studentName,
+  currentPlan = 'mensal',
+  currentStatus = 'pending',
+  lastPaymentDate,
+  onPaymentUpdate,
+  onLocalStatusChange
+}: PaymentManagerProps) {
   const { toast } = useToast();
   const { updateStudent } = useStudents();
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('pix');
-  const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>('pending');
-  const [message, setMessage] = useState('');
+  const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>(currentStatus);
+  const [selectedPlan, setSelectedPlan] = useState<PlanType>(currentPlan);
   const [isLoading, setIsLoading] = useState(false);
+  const [nextPaymentDate, setNextPaymentDate] = useState<Date>(new Date());
 
-  const handleSendNotification = async () => {
-    if (!message.trim()) {
-      toast({
-        title: 'Mensagem vazia',
-        description: 'Por favor, digite uma mensagem para o aluno.',
-        variant: 'destructive',
-      });
-      return;
-    }
+  const paymentAmount = PLAN_PRICES[selectedPlan];
 
-    try {
-      setIsLoading(true);
-      // Aqui você implementaria o envio da notificação para o aluno
-      // Por exemplo, enviar um email ou uma notificação no sistema
-      
-      // Simulando uma chamada de API
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      toast({
-        title: 'Notificação enviada',
-        description: `Mensagem enviada para ${studentName} com sucesso.`,
-      });
-      
-      setMessage('');
-    } catch (error) {
-      toast({
-        title: 'Erro ao enviar notificação',
-        description: 'Não foi possível enviar a mensagem para o aluno.',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsLoading(false);
+  useEffect(() => {
+    setPaymentStatus(currentStatus);
+  }, [currentStatus]);
+
+  useEffect(() => {
+    setSelectedPlan(currentPlan);
+  }, [currentPlan]);
+
+  useEffect(() => {
+    setNextPaymentDate(calculateNextPaymentDate(selectedPlan));
+  }, [selectedPlan]);
+
+  const calculateNextPaymentDate = (plan: PlanType): Date => {
+    const date = new Date();
+    switch (plan) {
+      case 'mensal':
+        date.setMonth(date.getMonth() + 1);
+        break;
+      case 'trimestral':
+        date.setMonth(date.getMonth() + 3);
+        break;
+      case 'semestral':
+        date.setMonth(date.getMonth() + 6);
+        break;
+      case 'anual':
+        date.setFullYear(date.getFullYear() + 1);
+        break;
     }
+    return date;
   };
 
   const handleUpdatePaymentStatus = async () => {
     try {
       setIsLoading(true);
-      const lastPaymentDate = new Date().toISOString();
-      
+      const now = new Date().toISOString();
+      const amount = PLAN_PRICES[selectedPlan];
+
+      // Prepare data payload
+      const updateData: any = {
+        paymentStatus,
+        planType: selectedPlan,
+        paymentMethod
+      };
+
+      // Only include payment details if status is 'paid'
+      if (paymentStatus === 'paid') {
+        updateData.amountPaid = amount;
+        updateData.lastPaymentDate = now;
+      }
+
       await updateStudent.mutateAsync({
         id: studentId,
-        data: {
-          lastPaymentDate,
-          paymentStatus: paymentStatus,
-          paymentMethod: paymentMethod,
-        },
+        data: updateData,
       });
-      
+
       toast({
         title: 'Pagamento atualizado',
         description: `Status de pagamento de ${studentName} atualizado com sucesso.`,
       });
-      
-      // Atualização otimista no frontend
-      onLocalStatusChange?.({
+
+      onLocalStatusChange({
         status: paymentStatus,
         method: paymentMethod,
-        lastPaymentDate,
+        lastPaymentDate: paymentStatus === 'paid' ? now : (lastPaymentDate || ''),
+        planType: selectedPlan,
+        amount
       });
+
       onPaymentUpdate();
     } catch (error) {
+      console.error('Error updating payment:', error);
       toast({
         title: 'Erro ao atualizar pagamento',
         description: 'Não foi possível atualizar o status de pagamento.',
@@ -99,17 +144,98 @@ export function PaymentManager({ studentId, studentName, onPaymentUpdate, onLoca
     }
   };
 
+  const formatDate = (date: Date | string) => {
+    if (!date) return 'Nenhum registro';
+    const dateObj = typeof date === 'string' ? new Date(date) : date;
+    return format(dateObj, "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
+  };
+
   return (
     <div className="space-y-4">
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-lg">Status do Pagamento</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {paymentStatus === 'overdue' && (
+            <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4 rounded" role="alert">
+              <p className="font-bold">Pagamento em Atraso</p>
+              <p>O plano {selectedPlan} está vencido. Valor pendente: R$ {PLAN_PRICES[selectedPlan].toFixed(2).replace('.', ',')}</p>
+            </div>
+          )}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label className="text-muted-foreground">Status Atual</Label>
+              <div className="flex items-center gap-2">
+                {paymentStatus === 'paid' ? (
+                  <CheckCircle className="h-5 w-5 text-green-500" />
+                ) : paymentStatus === 'overdue' ? (
+                  <XCircle className="h-5 w-5 text-red-500" />
+                ) : (
+                  <Clock className="h-5 w-5 text-yellow-500" />
+                )}
+                <span className="capitalize">
+                  {paymentStatus === 'paid' ? 'Pago' :
+                    paymentStatus === 'pending' ? 'Pendente' : 'Atrasado'}
+                </span>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-muted-foreground">Mensalidade</Label>
+              <div className="flex items-center gap-2">
+                <DollarSign className="h-5 w-5 text-primary" />
+                <span>{PLAN_LABELS[selectedPlan]}</span>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-muted-foreground">Último Pagamento</Label>
+              <div className="flex items-center gap-2">
+                <Calendar className="h-5 w-5 text-primary" />
+                <span>{lastPaymentDate ? formatDate(lastPaymentDate) : 'Nenhum registro'}</span>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-muted-foreground">Próximo Vencimento</Label>
+              <div className="flex items-center gap-2">
+                <Calendar className="h-5 w-5 text-primary" />
+                <span>{formatDate(nextPaymentDate)}</span>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
           <CardTitle>Gerenciar Pagamento</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
+            <Label>Selecione o Plano</Label>
+            <Select
+              value={selectedPlan}
+              onValueChange={(value: PlanType) => setSelectedPlan(value)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione o plano" />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(PLAN_LABELS).map(([value, label]) => (
+                  <SelectItem key={value} value={value}>
+                    {label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
             <Label>Método de Pagamento</Label>
-            <Select 
-              value={paymentMethod} 
+            <Select
+              value={paymentMethod}
               onValueChange={(value: PaymentMethod) => setPaymentMethod(value)}
             >
               <SelectTrigger>
@@ -126,8 +252,8 @@ export function PaymentManager({ studentId, studentName, onPaymentUpdate, onLoca
 
           <div className="space-y-2">
             <Label>Status do Pagamento</Label>
-            <RadioGroup 
-              value={paymentStatus} 
+            <RadioGroup
+              value={paymentStatus}
               onValueChange={(value: PaymentStatus) => setPaymentStatus(value)}
               className="grid grid-cols-3 gap-4"
             >
@@ -164,40 +290,13 @@ export function PaymentManager({ studentId, studentName, onPaymentUpdate, onLoca
             </RadioGroup>
           </div>
 
-          <Button 
+          <Button
             onClick={handleUpdatePaymentStatus}
             disabled={isLoading}
-            className="w-full"
+            className="w-full mt-4"
+            size="lg"
           >
             {isLoading ? 'Salvando...' : 'Atualizar Status de Pagamento'}
-          </Button>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Notificar Aluno</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="message">Mensagem para o aluno</Label>
-            <Textarea
-              id="message"
-              placeholder={`Digite uma mensagem para ${studentName} sobre o pagamento...`}
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              rows={4}
-            />
-          </div>
-          
-          <Button 
-            onClick={handleSendNotification}
-            disabled={isLoading || !message.trim()}
-            className="w-full"
-            variant="outline"
-          >
-            <Send className="mr-2 h-4 w-4" />
-            {isLoading ? 'Enviando...' : 'Enviar Notificação'}
           </Button>
         </CardContent>
       </Card>

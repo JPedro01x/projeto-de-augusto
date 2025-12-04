@@ -24,7 +24,9 @@ export function useStudents() {
         planType: student.planType || 'Não definido',
         status: student.status || 'inactive',
         avatar: student.avatar || '/images/avatars/default-avatar.png',
-        gender: student.gender || 'not_specified'
+        gender: student.gender || 'not_specified',
+        height: student.height || null,
+        weight: student.weight || null
       }));
     },
   });

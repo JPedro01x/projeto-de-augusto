@@ -29,22 +29,22 @@ export const register = async (req: Request, res: Response) => {
     const salt = await bcrypt.genSalt(10);
     const passwordHash = await bcrypt.hash(password, salt);
 
-    const user = repo.create({ 
-      name, 
-      email, 
-      password: passwordHash, 
-      role: role as UserRole, 
-      isActive: true 
+    const user = repo.create({
+      name,
+      email,
+      password: passwordHash,
+      userType: role as UserRole,
+      status: 'active'
     });
     await repo.save(user);
 
     const jwtSecret = process.env.JWT_SECRET || 'your-secret-key';
     const jwtExpiresIn = process.env.JWT_EXPIRES_IN || '1d';
-    
+
     // Usar uma função de callback para evitar problemas de tipagem
     const token = await new Promise<string>((resolve, reject) => {
       jwt.sign(
-        { user: { id: user.id, role: user.role } },
+        { user: { id: user.id, role: user.userType } },
         jwtSecret,
         { expiresIn: jwtExpiresIn } as jwt.SignOptions,
         (err, token) => {
@@ -61,7 +61,7 @@ export const register = async (req: Request, res: Response) => {
         id: user.id,
         name: user.name,
         email: user.email,
-        role: user.role,
+        role: user.userType,
       },
     });
   } catch (e) {
@@ -74,12 +74,12 @@ export const login = async (req: Request, res: Response) => {
   try {
     console.log('Recebida requisição de login:', req.body);
     const { email, password } = req.body;
-    
+
     if (!email || !password) {
       console.error('Email ou senha não fornecidos');
       return res.status(400).json({ message: 'Email e senha são obrigatórios' });
     }
-    
+
     console.log('Procurando usuário no banco de dados...');
     const userRepo = AppDataSource.getRepository(User);
     let userRaw: any;
@@ -102,7 +102,7 @@ export const login = async (req: Request, res: Response) => {
       console.error('Erro ao buscar usuário no banco de dados:', dbError);
       return res.status(500).json({ message: 'Erro ao buscar usuário', error: dbError.message });
     }
-    
+
     if (!userRaw) {
       console.error('Usuário não encontrado:', email);
       return res.status(400).json({ message: 'Credenciais inválidas' });
@@ -118,17 +118,17 @@ export const login = async (req: Request, res: Response) => {
       console.error('Erro ao comparar senhas:', bcryptError);
       return res.status(500).json({ message: 'Erro ao verificar senha', error: bcryptError.message });
     }
-    
+
     if (!passwordMatch) {
       console.error('Senha incorreta para o usuário:', email);
       return res.status(400).json({ message: 'Credenciais inválidas' });
     }
-    
+
     console.log('Login bem-sucedido para o usuário:', userRaw.id);
 
     const jwtSecret = process.env.JWT_SECRET || 'your-secret-key';
     const jwtExpiresIn = process.env.JWT_EXPIRES_IN || '1d';
-    
+
     console.log('Gerando token JWT...');
     try {
       const token = await new Promise<string>((resolve, reject) => {
@@ -169,18 +169,44 @@ export const login = async (req: Request, res: Response) => {
     } catch (error) {
       const tokenError = error as Error;
       console.error('Erro durante a geração do token:', tokenError);
-      return res.status(500).json({ 
+      return res.status(500).json({
         message: 'Erro ao gerar token de autenticação',
-        error: tokenError.message 
+        error: tokenError.message
       });
     }
   } catch (error) {
     const e = error as Error;
     console.error('Erro inesperado no login:', e);
-    return res.status(500).json({ 
+    return res.status(500).json({
       message: 'Erro interno do servidor',
       error: e.message,
       stack: process.env.NODE_ENV === 'development' ? e.stack : undefined
     });
+  }
+};
+
+export const checkSession = async (req: Request, res: Response) => {
+  try {
+    // O usuário já foi adicionado à requisição pelo middleware de autenticação
+    const user = req.user as User;
+
+    if (!user) {
+      return res.status(401).json({ message: 'Usuário não autenticado' });
+    }
+
+    return res.json({
+      valid: true,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.userType || 'student',
+        cpf: user.cpf,
+        phone: user.phone
+      }
+    });
+  } catch (error) {
+    console.error('Erro ao verificar sessão:', error);
+    return res.status(500).json({ message: 'Erro interno ao verificar sessão' });
   }
 };

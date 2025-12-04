@@ -61,6 +61,18 @@ export class Student {
   @Column({ name: 'next_payment_date', type: 'date', nullable: true })
   nextPaymentDate?: Date;
 
+  @Column({ name: 'payment_method', type: 'varchar', length: 50, nullable: true })
+  paymentMethod?: string;
+
+  @Column({ name: 'amount_paid', type: 'decimal', precision: 10, scale: 2, nullable: true })
+  amountPaid?: number;
+
+  @Column({ type: 'decimal', precision: 5, scale: 2, nullable: true })
+  height?: number;
+
+  @Column({ type: 'decimal', precision: 5, scale: 2, nullable: true })
+  weight?: number;
+
   @Column({ type: 'varchar', length: 20, nullable: true })
   gender?: string;
 }

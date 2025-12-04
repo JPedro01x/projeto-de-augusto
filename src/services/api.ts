@@ -40,12 +40,29 @@ export const apiRequest = async <T>(
   endpoint: string, 
   options: RequestInit = {}
 ): Promise<T> => {
+  // Obter o token de autenticação
   const token = getToken();
   
+  // Log para depuração
+  console.log(`[API] Fazendo requisição para: ${endpoint}`, { 
+    temToken: !!token,
+    metodo: options.method || 'GET'
+  });
+
+  if (!token) {
+    console.error('Erro: Nenhum token de autenticação encontrado');
+    // Redirecionar para a página de login
+    if (typeof window !== 'undefined') {
+      window.location.href = '/login';
+    }
+    throw new Error('Token de autenticação não encontrado');
+  }
+
+  // Configurar os cabeçalhos
   const headers = new Headers({
     'Content-Type': 'application/json',
     'Accept': 'application/json',
-    ...(token && { 'Authorization': `Bearer ${token}` }),
+    'Authorization': `Bearer ${token}`,
     ...(options.headers || {})
   });
 
@@ -53,12 +70,32 @@ export const apiRequest = async <T>(
     const response = await fetch(`${API_BASE}${endpoint}`, {
       ...options,
       headers,
-      credentials: 'include' // Importante para enviar cookies se estiver usando
+      credentials: 'include',
+      mode: 'cors'
     });
 
+    // Se recebermos um 401 (Não Autorizado), o token pode ter expirado
+    if (response.status === 401) {
+      console.error('Erro 401: Token expirado ou inválido');
+      // Remover o token inválido
+      localStorage.removeItem('token');
+      sessionStorage.removeItem('token');
+      // Redirecionar para a página de login
+      if (typeof window !== 'undefined') {
+        window.location.href = '/login';
+      }
+      throw new Error('Sessão expirada. Por favor, faça login novamente.');
+    }
+
+    // Se houver outro erro
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      const error = new Error(errorData.message || 'Erro na requisição') as any;
+      console.error(`Erro na requisição para ${endpoint}:`, {
+        status: response.status,
+        statusText: response.statusText,
+        error: errorData
+      });
+      const error = new Error(errorData.message || `Erro na requisição: ${response.status} ${response.statusText}`) as any;
       error.status = response.status;
       error.data = errorData;
       throw error;
@@ -71,7 +108,14 @@ export const apiRequest = async <T>(
 
     return await response.json();
   } catch (error) {
-    console.error('Erro na requisição:', error);
+    console.error(`Erro na requisição para ${endpoint}:`, error);
+    
+    // Se for um erro de rede, fornecer uma mensagem mais amigável
+    if (error instanceof TypeError && error.message === 'Failed to fetch') {
+      console.error('Erro de conexão. Verifique sua conexão com a internet e tente novamente.');
+      throw new Error('Não foi possível conectar ao servidor. Verifique sua conexão com a internet e tente novamente.');
+    }
+    
     throw error;
   }
 };

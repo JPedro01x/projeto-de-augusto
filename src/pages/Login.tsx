@@ -4,8 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { Dumbbell, Lock, Mail, Eye, EyeOff } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Dumbbell, Lock, Mail, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 
 interface FormErrors {
@@ -20,16 +20,34 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<FormErrors>({});
   const [rememberMe, setRememberMe] = useState(false);
-  const { login, isAuthenticated } = useAuth();
+  const { login, isAuthenticated, isLoading, user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
+  const from = (location.state as { from?: string })?.from || '/admin';
 
-  // Redirect if already authenticated
+  // Redirecionar se já estiver autenticado
   useEffect(() => {
-    if (isAuthenticated) {
-      navigate('/admin');
+    if (isAuthenticated && user) {
+      // Determinar para onde redirecionar com base na função do usuário
+      const redirectPath = user.role === 'admin' ? 
+        from : 
+        user.role === 'instructor' ? '/instructor/dashboard' : 
+        '/student/dashboard';
+      
+      console.log(`Redirecionando usuário ${user.role} para:`, redirectPath);
+      navigate(redirectPath, { replace: true });
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, user, navigate, from]);
+
+  // Se estiver carregando, mostrar um indicador de carregamento
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-12 w-12 animate-spin" />
+      </div>
+    );
+  }
 
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {};
@@ -70,15 +88,21 @@ const Login = () => {
     }
 
     setLoading(true);
-    const success = await login(email, password, rememberMe);
-    
-    if (success) {
-      toast({
-        title: 'Login realizado!',
-        description: 'Bem-vindo de volta.',
-        variant: 'default',
-      });
-    } else {
+    try {
+      const success = await login(email, password, rememberMe);
+      
+      if (success) {
+        toast({
+          title: 'Login realizado!',
+          description: 'Bem-vindo de volta.',
+          variant: 'default',
+        });
+        // O redirecionamento será tratado pelo useEffect que monitora isAuthenticated
+      } else {
+        throw new Error('Falha na autenticação');
+      }
+    } catch (error) {
+      console.error('Erro durante o login:', error);
       toast({
         title: 'Erro no login',
         description: 'Email ou senha inválidos.',
@@ -86,14 +110,18 @@ const Login = () => {
       });
       // Limpar senha em caso de erro
       setPassword('');
+    } finally {
+      setLoading(false);
     }
-    
-    setLoading(false);
   };
 
-  // Se estiver autenticado, não renderiza nada até o redirecionamento
+  // Se estiver autenticado, mostra o indicador de carregamento
   if (isAuthenticated) {
-    return null;
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-12 w-12 animate-spin" />
+      </div>
+    );
   }
 
   return (

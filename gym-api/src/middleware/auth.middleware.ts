@@ -14,7 +14,7 @@ interface JwtPayload {
 declare global {
   namespace Express {
     interface Request {
-      user?: {
+      user?: User | {
         id: number;
         userType: UserRole;
         instructorId?: number;
@@ -35,19 +35,19 @@ export const authenticateToken = async (req: Request, res: Response, next: NextF
 
     // Verificar e decodificar o token JWT
     const decoded: any = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
-    
+
     // Extrair userId do payload (pode estar em { user: { id } } ou { userId })
     const userId = decoded?.user?.id || decoded?.userId;
-    
+
     if (!userId) {
       return res.status(401).json({ message: 'Token inválido: ID do usuário não encontrado' });
     }
 
     // Verificar se o usuário existe no banco de dados
     const userRepository = AppDataSource.getRepository(User);
-    const user = await userRepository.findOne({ 
+    const user = await userRepository.findOne({
       where: { id: userId },
-      select: ['id', 'name', 'email', 'role', 'createdAt', 'updatedAt']
+      select: ['id', 'name', 'email', 'userType', 'createdAt', 'updatedAt']
     });
 
     if (!user) {
@@ -57,7 +57,7 @@ export const authenticateToken = async (req: Request, res: Response, next: NextF
     // Adicionar o usuário à requisição para uso posterior
     req.user = {
       id: user.id,
-      userType: (user.role as UserRole) || 'user',
+      userType: user.userType || 'student',
       instructorId: decoded?.instructorId
     };
 
@@ -76,8 +76,8 @@ export const authMiddleware = (roles: UserRole[]) => {
     }
 
     if (!roles.includes(req.user.userType)) {
-      return res.status(403).json({ 
-        message: 'Acesso negado. Permissões insuficientes.' 
+      return res.status(403).json({
+        message: 'Acesso negado. Permissões insuficientes.'
       });
     }
 
@@ -97,4 +97,3 @@ export const authorizeRoles = (roles: UserRole[]) => {
     next();
   };
 };
- 
