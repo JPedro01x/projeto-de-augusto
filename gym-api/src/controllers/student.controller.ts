@@ -234,6 +234,7 @@ export const updateStudent = async (req: Request, res: Response) => {
       phone,
       birthDate,
       address,
+      gender,
       emergencyContactName,
       emergencyContactPhone,
       status,
@@ -252,81 +253,149 @@ export const updateStudent = async (req: Request, res: Response) => {
     const userRepo = AppDataSource.getRepository(User);
     const studentRepo = AppDataSource.getRepository(Student);
 
+    console.log('=== UPDATE STUDENT ===');
+    console.log('ID:', id);
+    console.log('Request body:', JSON.stringify(req.body, null, 2));
+    
+    // Check what fields are being updated
+    const fieldsBeingUpdated = Object.keys(req.body).filter(key => req.body[key] !== undefined);
+    console.log('Fields being updated:', fieldsBeingUpdated);
+
     const user = await userRepo.findOne({ where: { id: Number(id) } });
     if (!user) return res.status(404).json({ message: 'Student not found' });
 
-    // Atualiza User
-    if (name !== undefined) user.name = name;
-    if (email !== undefined) user.email = email;
-    if (cpf !== undefined) user.cpf = cpf;
-    if (phone !== undefined) user.phone = phone;
-    if (birthDate !== undefined) user.birthDate = birthDate;
-    if (address !== undefined) user.address = address;
-    if (status !== undefined) user.status = status;
-    // Atualiza senha se enviada
-    if (password !== undefined && password !== null && String(password).length > 0) {
-      user.password = await bcrypt.hash(String(password), 10);
+    // Verifica se há campos de usuário para atualizar
+    const hasUserUpdates = name !== undefined || email !== undefined || cpf !== undefined ||
+      phone !== undefined || birthDate !== undefined || address !== undefined ||
+      status !== undefined || gender !== undefined || (password !== undefined && password !== null && String(password).length > 0);
+
+    if (hasUserUpdates) {
+      // Atualiza User
+      if (name !== undefined) user.name = name;
+      if (email !== undefined) user.email = email;
+      if (cpf !== undefined) user.cpf = cpf;
+      if (phone !== undefined) user.phone = phone;
+      if (birthDate !== undefined) {
+        // Convert to Date object if it's a string, and extract only the date part
+        const dateValue = typeof birthDate === 'string' ? new Date(birthDate) : birthDate;
+        // Fix: Send only YYYY-MM-DD to avoid MySQL error with ISO string
+        user.birthDate = dateValue.toISOString().split('T')[0] as any;
+      }
+      if (address !== undefined) user.address = address;
+      if (status !== undefined) user.status = status;
+      if (gender !== undefined) user.gender = gender;
+      // Atualiza senha se enviada
+      if (password !== undefined && password !== null && String(password).length > 0) {
+        user.password = await bcrypt.hash(String(password), 10);
+      }
+      await userRepo.save(user);
     }
-    await userRepo.save(user);
 
     // Atualiza Student
     let student = await studentRepo.findOne({ where: { userId: Number(id) } });
+
     if (!student) {
+      // Se não existir, cria um novo (caso raro de inconsistência)
       student = studentRepo.create({ userId: Number(id) });
-    }
-    if (emergencyContactName !== undefined) student.emergencyContactName = emergencyContactName;
-    if (emergencyContactPhone !== undefined) student.emergencyContactPhone = emergencyContactPhone;
-    if (planType !== undefined) student.planType = planType;
-    if (startDate !== undefined) student.startDate = startDate;
-    if (endDate !== undefined) student.endDate = endDate;
-    if (paymentStatus !== undefined) student.paymentStatus = paymentStatus;
-    if (paymentMethod !== undefined) student.paymentMethod = paymentMethod;
-    if (height !== undefined) student.height = height ? parseFloat(height) : undefined;
-    if (weight !== undefined) student.weight = weight ? parseFloat(weight) : undefined;
-
-    // Se amountPaid foi enviado, atualiza lastPaymentDate e calcula nextPaymentDate
-    if (amountPaid !== undefined) {
-      student.amountPaid = parseFloat(amountPaid);
-      student.lastPaymentDate = lastPaymentDate ? new Date(lastPaymentDate) : new Date();
-
-      // Calcula a próxima data de pagamento baseada no planType
-      const currentPlanType = planType || student.planType;
-      if (currentPlanType) {
-        const nextDate = new Date(student.lastPaymentDate);
-
-        switch (currentPlanType.toLowerCase()) {
-          case 'mensal':
-            nextDate.setMonth(nextDate.getMonth() + 1);
-            break;
-          case 'trimestral':
-            nextDate.setMonth(nextDate.getMonth() + 3);
-            break;
-          case 'semestral':
-            nextDate.setMonth(nextDate.getMonth() + 6);
-            break;
-          case 'anual':
-            nextDate.setFullYear(nextDate.getFullYear() + 1);
-            break;
-          default:
-            // Se não for um dos planos conhecidos, adiciona 1 mês por padrão
-            nextDate.setMonth(nextDate.getMonth() + 1);
-        }
-
-        student.nextPaymentDate = nextDate;
+      // Para novo registro, usamos save
+      if (emergencyContactName !== undefined) student.emergencyContactName = emergencyContactName;
+      if (emergencyContactPhone !== undefined) student.emergencyContactPhone = emergencyContactPhone;
+      if (planType !== undefined) student.planType = planType;
+      if (startDate !== undefined) {
+        const date = new Date(startDate);
+        student.startDate = date.toISOString().split('T')[0] as any;
       }
-    } else {
-      // Se não foi enviado amountPaid, mas foi enviado lastPaymentDate ou nextPaymentDate
-      if (lastPaymentDate !== undefined) student.lastPaymentDate = lastPaymentDate;
-      if (nextPaymentDate !== undefined) student.nextPaymentDate = nextPaymentDate;
-    }
+      if (endDate !== undefined) {
+        const date = new Date(endDate);
+        student.endDate = date.toISOString().split('T')[0] as any;
+      }
+      if (paymentStatus !== undefined) student.paymentStatus = paymentStatus;
+      if (paymentMethod !== undefined) student.paymentMethod = paymentMethod;
+      if (height !== undefined) student.height = height ? parseFloat(height) : undefined;
+      if (weight !== undefined) student.weight = weight ? parseFloat(weight) : undefined;
 
-    await studentRepo.save(student);
+      await studentRepo.save(student);
+    } else {
+      // Se já existe, usamos update para evitar problemas com relações (User)
+      const updateData: any = {};
+
+      if (emergencyContactName !== undefined) updateData.emergencyContactName = emergencyContactName;
+      if (emergencyContactPhone !== undefined) updateData.emergencyContactPhone = emergencyContactPhone;
+      if (planType !== undefined) updateData.planType = planType;
+      if (startDate !== undefined) {
+        const date = new Date(startDate);
+        updateData.startDate = date.toISOString().split('T')[0];
+      }
+      if (endDate !== undefined) {
+        const date = new Date(endDate);
+        updateData.endDate = date.toISOString().split('T')[0];
+      }
+      if (paymentStatus !== undefined) updateData.paymentStatus = paymentStatus;
+      if (paymentMethod !== undefined) updateData.paymentMethod = paymentMethod;
+      if (height !== undefined) updateData.height = height ? parseFloat(height) : undefined;
+      if (weight !== undefined) updateData.weight = weight ? parseFloat(weight) : undefined;
+
+      // Se amountPaid foi enviado, atualiza lastPaymentDate e calcula nextPaymentDate
+      if (amountPaid !== undefined) {
+        updateData.amountPaid = parseFloat(amountPaid);
+        const paymentDate = lastPaymentDate ? new Date(lastPaymentDate) : new Date();
+        // Fix: Send only YYYY-MM-DD to avoid MySQL error with ISO string
+        updateData.lastPaymentDate = paymentDate.toISOString().split('T')[0];
+
+        // Calcula a próxima data de pagamento baseada no planType
+        const currentPlanType = planType || student.planType;
+        if (currentPlanType) {
+          const nextDate = new Date(paymentDate);
+
+          switch (currentPlanType.toLowerCase()) {
+            case 'mensal':
+              nextDate.setMonth(nextDate.getMonth() + 1);
+              break;
+            case 'trimestral':
+              nextDate.setMonth(nextDate.getMonth() + 3);
+              break;
+            case 'semestral':
+              nextDate.setMonth(nextDate.getMonth() + 6);
+              break;
+            case 'anual':
+              nextDate.setFullYear(nextDate.getFullYear() + 1);
+              break;
+            default:
+              // Se não for um dos planos conhecidos, adiciona 1 mês por padrão
+              nextDate.setMonth(nextDate.getMonth() + 1);
+          }
+
+          updateData.nextPaymentDate = nextDate.toISOString().split('T')[0];
+        }
+      } else {
+        // Se não foi enviado amountPaid, mas foi enviado lastPaymentDate ou nextPaymentDate
+        if (lastPaymentDate !== undefined) {
+          const date = new Date(lastPaymentDate);
+          updateData.lastPaymentDate = date.toISOString().split('T')[0];
+        }
+        if (nextPaymentDate !== undefined) {
+          const date = new Date(nextPaymentDate);
+          updateData.nextPaymentDate = date.toISOString().split('T')[0];
+        }
+      }
+
+      console.log('Updating student data:', JSON.stringify(updateData, null, 2));
+      if (Object.keys(updateData).length > 0) {
+        await studentRepo.update({ userId: Number(id) }, updateData);
+        console.log('Student updated successfully');
+      }
+    }
 
     const result = await studentRepo.findOne({ where: { userId: Number(id) }, relations: { user: true } });
     return res.json(result);
   } catch (e) {
-    console.error(e);
-    return res.status(500).json({ message: 'Server error' });
+    console.error('=== ERROR UPDATING STUDENT ===');
+    console.error('Error details:', e);
+    if (e instanceof Error) {
+      console.error('Error message:', e.message);
+      console.error('Error stack:', e.stack);
+    }
+    return res.status(500).json({ message: 'Server error', error: e instanceof Error ? e.message : String(e) });
   }
 };
 

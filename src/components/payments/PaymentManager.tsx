@@ -97,7 +97,7 @@ export function PaymentManager({
   const handleUpdatePaymentStatus = async () => {
     try {
       setIsLoading(true);
-      const now = new Date().toISOString();
+      const now = new Date().toISOString().split('T')[0]; // Format as YYYY-MM-DD
       const amount = PLAN_PRICES[selectedPlan];
 
       // Prepare data payload
@@ -161,6 +161,12 @@ export function PaymentManager({
             <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4 rounded" role="alert">
               <p className="font-bold">Pagamento em Atraso</p>
               <p>O plano {selectedPlan} está vencido. Valor pendente: R$ {PLAN_PRICES[selectedPlan].toFixed(2).replace('.', ',')}</p>
+            </div>
+          )}
+          {paymentStatus === 'pending' && (
+            <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4 rounded" role="alert">
+              <p className="font-bold">Pagamento Pendente</p>
+              <p>O pagamento do plano {selectedPlan} está pendente. Valor a pagar: R$ {PLAN_PRICES[selectedPlan].toFixed(2).replace('.', ',')}</p>
             </div>
           )}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

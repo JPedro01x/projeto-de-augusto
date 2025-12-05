@@ -37,14 +37,14 @@ export const getToken = (): string | null => {
 
 // Função de requisição HTTP personalizada que inclui o token de autenticação
 export const apiRequest = async <T>(
-  endpoint: string, 
+  endpoint: string,
   options: RequestInit = {}
 ): Promise<T> => {
   // Obter o token de autenticação
   const token = getToken();
-  
+
   // Log para depuração
-  console.log(`[API] Fazendo requisição para: ${endpoint}`, { 
+  console.log(`[API] Fazendo requisição para: ${endpoint}`, {
     temToken: !!token,
     metodo: options.method || 'GET'
   });
@@ -109,13 +109,13 @@ export const apiRequest = async <T>(
     return await response.json();
   } catch (error) {
     console.error(`Erro na requisição para ${endpoint}:`, error);
-    
+
     // Se for um erro de rede, fornecer uma mensagem mais amigável
     if (error instanceof TypeError && error.message === 'Failed to fetch') {
       console.error('Erro de conexão. Verifique sua conexão com a internet e tente novamente.');
       throw new Error('Não foi possível conectar ao servidor. Verifique sua conexão com a internet e tente novamente.');
     }
-    
+
     throw error;
   }
 };
@@ -189,7 +189,7 @@ export const studentAPI = {
           medicalConditions: student.medicalConditions
         })
       });
-      
+
       return { ...student, id: String(data.id) } as Student;
     } catch (error) {
       console.error('Erro ao criar aluno:', error);
@@ -203,40 +203,13 @@ export const studentAPI = {
       // Primeiro, obtemos os dados atuais do aluno
       const current = await studentAPI.get(id);
       if (!current) return null;
-      
-      // Atualizamos apenas os campos fornecidos
-      const updatedData = {
-        ...current,
-        ...data,
-        // Garantir que o ID não seja sobrescrito
-        id: current.id
-      };
-      
-      // Enviamos a atualização para o servidor
+
+      // Enviamos a atualização para o servidor (apenas os campos fornecidos)
       const response = await apiRequest<any>(`/students/${id}`, {
         method: 'PUT',
-        body: JSON.stringify({
-          name: data.name || current.name,
-          email: data.email || current.email,
-          // permite redefinir senha quando fornecida
-          password: (data as any).password,
-          cpf: data.cpf || current.cpf,
-          phone: data.phone || current.phone,
-          birthDate: data.birthDate || current.birthDate,
-          address: data.address || current.address,
-          emergencyContactName: data.emergencyContact || current.emergencyContact,
-          status: data.status || current.status,
-          planType: data.planType || current.planType,
-          paymentStatus: data.paymentStatus || current.paymentStatus,
-          lastPaymentDate: data.lastPaymentDate || current.lastPaymentDate,
-          nextPaymentDate: data.nextPaymentDate || current.nextPaymentDate,
-          assignedInstructor: data.assignedInstructor || current.assignedInstructor,
-          medicalConditions: data.medicalConditions || current.medicalConditions,
-          startDate: data.startDate || current.startDate,
-          endDate: data.endDate || current.endDate
-        })
+        body: JSON.stringify(data)
       });
-      
+
       // Retornamos os dados atualizados
       return {
         ...current,
@@ -604,18 +577,18 @@ export const financeAPI = {
       const response = await fetch(
         `${API_BASE}/finance/report?startDate=${startDate}&endDate=${endDate}`,
         {
-          headers: { 
+          headers: {
             'Authorization': `Bearer ${getToken()}`,
             'Accept': 'application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
           },
         }
       );
-      
+
       if (!response.ok) {
         const error = await response.json().catch(() => ({}));
         throw new Error(error.message || 'Falha ao gerar relatório');
       }
-      
+
       return response.blob();
     } catch (error) {
       console.error('Erro ao gerar relatório financeiro:', error);

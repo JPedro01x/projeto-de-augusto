@@ -11,9 +11,9 @@ export const listInstructors = async (req: Request, res: Response) => {
   console.log('Headers:', req.headers);
   console.log('Método:', req.method);
   console.log('URL original:', req.originalUrl);
-  
+
   const queryRunner = AppDataSource.createQueryRunner();
-  
+
   // Configuração CORS
   res.header('Access-Control-Allow-Origin', 'http://localhost:5173');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
@@ -25,21 +25,21 @@ export const listInstructors = async (req: Request, res: Response) => {
     console.log('Resposta para OPTIONS enviada');
     return res.status(200).end();
   }
-  
+
   try {
     console.log('Iniciando listagem de instrutores...');
-    
+
     await queryRunner.connect();
-    
+
     // Busca os instrutores com os dados do usuário relacionado
     const instructors = await queryRunner.manager
       .createQueryBuilder(Instructor, 'instructor')
       .leftJoinAndSelect('instructor.user', 'user')
-      .where('user.isActive = :isActive', { isActive: true })
+      .where('user.status = :status', { status: 'active' })
       .getMany();
 
     console.log(`Encontrados ${instructors.length} instrutores`);
-    
+
     const result = await Promise.all(instructors.map(async (instructor) => {
       try {
         // Obtém a contagem de alunos ativos
@@ -56,7 +56,7 @@ export const listInstructors = async (req: Request, res: Response) => {
           console.warn('Erro ao buscar alunos ativos, usando 0 como padrão:', error);
           activeStudentsCount = 0;
         }
-        
+
         return {
           id: instructor.userId,
           name: instructor.user?.name || 'Nome não informado',
@@ -79,12 +79,12 @@ export const listInstructors = async (req: Request, res: Response) => {
 
     // Filtra quaisquer resultados nulos que possam ter ocorrido durante o processamento
     const filteredResult = result.filter((instructor): instructor is NonNullable<typeof instructor> => instructor !== null);
-    
+
     console.log('Lista de instrutores processada com sucesso');
     return res.json(filteredResult);
   } catch (error) {
     console.error('Erro ao listar instrutores:', error);
-    return res.status(500).json({ 
+    return res.status(500).json({
       message: 'Erro ao listar instrutores',
       error: error instanceof Error ? error.message : 'Erro desconhecido',
       stack: process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.stack : undefined) : undefined
@@ -99,14 +99,14 @@ export const getInstructorById = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     console.log(`Buscando instrutor com ID: ${id}`);
-    
+
     const instructorRepo = AppDataSource.getRepository(Instructor);
-    const instructor = await instructorRepo.findOne({ 
+    const instructor = await instructorRepo.findOne({
       where: { userId: Number(id) },
       relations: ['user']
     });
 
-    if (!instructor || !instructor.user || !instructor.user.isActive) {
+    if (!instructor || !instructor.user || instructor.user.status !== 'active') {
       console.log(`Instrutor com ID ${id} não encontrado ou inativo`);
       return res.status(404).json({ message: 'Instrutor não encontrado' });
     }
@@ -136,7 +136,7 @@ export const getInstructorById = async (req: Request, res: Response) => {
     return res.json(result);
   } catch (error) {
     console.error('Erro ao buscar instrutor:', error);
-    return res.status(500).json({ 
+    return res.status(500).json({
       message: 'Erro ao buscar instrutor',
       error: error instanceof Error ? error.message : 'Erro desconhecido',
       stack: error instanceof Error ? error.stack : undefined
@@ -146,22 +146,22 @@ export const getInstructorById = async (req: Request, res: Response) => {
 
 export const createInstructor = async (req: Request, res: Response) => {
   const queryRunner = AppDataSource.createQueryRunner();
-  
+
   try {
-    const { 
-      name, 
-      email, 
-      password, 
-      phone, 
-      cpf, 
-      specialty, 
-      certifications, 
+    const {
+      name,
+      email,
+      password,
+      phone,
+      cpf,
+      specialty,
+      certifications,
       hireDate,
       bio,
       photoUrl,
       salary
     } = req.body;
-       
+
     // Validação básica
     if (!name || !email || !password || !cpf) {
       return res.status(400).json({ message: 'Nome, email, senha e CPF são obrigatórios' });
@@ -188,8 +188,8 @@ export const createInstructor = async (req: Request, res: Response) => {
       password: hashedPassword,
       phone: phone || null,
       cpf,
-      role: 'instructor' as const,
-      isActive: true
+      userType: 'instructor' as const,
+      status: 'active'
     });
 
     const savedUser = await queryRunner.manager.save(newUser);
